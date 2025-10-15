@@ -4,6 +4,10 @@
 
 # [CodeRevAI] - Next.js App
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org/)
+
 A powerful AI-powered code review application built with Next.js, featuring user authentication via Clerk and AI analysis powered by Google Gemini.
 
 ## Features
@@ -128,3 +132,29 @@ See [SECURITY.md](./SECURITY.md) for complete guidelines.
 - **Styling:** Tailwind CSS v4
 - **Language:** TypeScript
 - **Deployment:** Google Cloud Run (Docker)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Next.js](https://nextjs.org/) - React framework
+- [Clerk](https://clerk.com/) - Authentication
+- [Stripe](https://stripe.com/) - Payment processing
+- [Google Gemini](https://ai.google.dev/) - AI-powered code analysis
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+
+---
+
+**Made with ❤️ by [vizionik25](https://github.com/vizionik25)**

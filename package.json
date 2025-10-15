@@ -1,7 +1,14 @@
 {
-  "name": "code-review-ai",
-  "private": true,
-  "version": "0.0.0",
+  "name": "coderevai",
+  "version": "1.0.0",
+  "description": "AI-powered code review application with authentication and payment processing",
+  "author": "vizionik25",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vizionik25/CodeRevAI.git"
+  },
+  "private": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
