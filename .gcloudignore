@@ -1,0 +1,69 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud commands. It follows the same syntax as .gitignore
+
+.git
+.gitignore
+
+# Node.js dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Environment files (use Secret Manager instead)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Testing
+coverage/
+.nyc_output/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache
+.cache/
+.turbo/
+*.tsbuildinfo
+
+# Documentation (optional - remove if you want docs deployed)
+README.md
+*.md
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+
+# Zone Identifier files
+*.Zone.Identifier
+
+# Docker files (not needed when using Cloud Build)
+Dockerfile
+.dockerignore
+
+# Misc
+*.pem
