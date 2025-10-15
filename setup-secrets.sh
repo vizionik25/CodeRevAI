@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Script to set up Google Cloud secrets for CodeRevAI
-# Make this file executable: chmod +x setup-secrets.sh
+# Google Cloud Secret Manager Setup Script
+# This script automatically reads your .env.local file and uploads secrets to Google Cloud
 
 set -e  # Exit on error
 
-echo "🔐 Setting up Google Cloud Secrets for CodeRevAI..."
+echo "🔐 Setting up Google Cloud Secret Manager for CodeRevAI..."
 echo ""
 
 # Check if gcloud is installed
@@ -26,84 +26,70 @@ fi
 echo "📦 Project: $PROJECT_ID"
 echo ""
 
+# Check if .env.local exists
+if [ ! -f .env.local ]; then
+    echo "❌ .env.local file not found!"
+    echo "   Please create .env.local with your API keys first."
+    exit 1
+fi
+
 # Enable Secret Manager API
 echo "🔧 Enabling Secret Manager API..."
-gcloud services enable secretmanager.googleapis.com
-
+gcloud services enable secretmanager.googleapis.com --project="$PROJECT_ID" 2>/dev/null || true
 echo ""
-echo "Please provide your secret values (input will be hidden):"
+
+# Load environment variables from .env.local
+echo "📄 Loading environment variables from .env.local..."
+set -a
+source .env.local
+set +a
 echo ""
 
 # Function to create or update secret
 create_or_update_secret() {
-    local secret_name=$1
-    local secret_value=$2
+    local SECRET_NAME=$1
+    local SECRET_VALUE=$2
     
-    if gcloud secrets describe $secret_name &>/dev/null; then
-        echo "  ↻ Updating existing secret: $secret_name"
-        echo -n "$secret_value" | gcloud secrets versions add $secret_name --data-file=-
+    if [ -z "$SECRET_VALUE" ]; then
+        echo "⚠️  Warning: $SECRET_NAME is empty, skipping..."
+        return
+    fi
+    
+    # Check if secret exists
+    if gcloud secrets describe "$SECRET_NAME" --project="$PROJECT_ID" &>/dev/null; then
+        echo "🔄 Updating existing secret: $SECRET_NAME"
+        echo -n "$SECRET_VALUE" | gcloud secrets versions add "$SECRET_NAME" --data-file=- --project="$PROJECT_ID"
     else
-        echo "  ✓ Creating new secret: $secret_name"
-        echo -n "$secret_value" | gcloud secrets create $secret_name --data-file=-
+        echo "➕ Creating new secret: $SECRET_NAME"
+        echo -n "$SECRET_VALUE" | gcloud secrets create "$SECRET_NAME" --data-file=- --replication-policy="automatic" --project="$PROJECT_ID"
     fi
 }
 
-# Get secrets from user
-echo "🔑 Gemini API Key:"
-read -s GEMINI_API_KEY
+echo "🔑 Creating/Updating secrets from .env.local..."
+echo ""
+
+# Server-side secrets (NOT exposed to client)
+echo "📝 Server-side secrets:"
 create_or_update_secret "GEMINI_API_KEY" "$GEMINI_API_KEY"
-
-echo ""
-echo "🔑 Clerk Publishable Key:"
-read -s CLERK_PUBLISHABLE_KEY
-create_or_update_secret "CLERK_PUBLISHABLE_KEY" "$CLERK_PUBLISHABLE_KEY"
-
-echo ""
-echo "🔑 Clerk Secret Key:"
-read -s CLERK_SECRET_KEY
 create_or_update_secret "CLERK_SECRET_KEY" "$CLERK_SECRET_KEY"
-
-echo ""
-echo "🔑 Stripe Publishable Key:"
-read -s STRIPE_PUBLISHABLE_KEY
-create_or_update_secret "STRIPE_PUBLISHABLE_KEY" "$STRIPE_PUBLISHABLE_KEY"
-
-echo ""
-echo "🔑 Stripe Secret Key:"
-read -s STRIPE_SECRET_KEY
 create_or_update_secret "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
-
+create_or_update_secret "STRIPE_WEBHOOK_SECRET" "$STRIPE_WEBHOOK_SECRET"
 echo ""
-echo "🔑 Stripe Webhook Secret (leave empty if not set up yet):"
-read -s STRIPE_WEBHOOK_SECRET
-if [ -n "$STRIPE_WEBHOOK_SECRET" ]; then
-    create_or_update_secret "STRIPE_WEBHOOK_SECRET" "$STRIPE_WEBHOOK_SECRET"
-else
-    echo "  ⚠️  Skipping Stripe Webhook Secret (you can add it later)"
-fi
 
+# Public secrets (exposed to client, needed for build)
+echo "📝 Public secrets (for build time):"
+create_or_update_secret "CLERK_PUBLISHABLE_KEY" "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+create_or_update_secret "STRIPE_PUBLISHABLE_KEY" "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+create_or_update_secret "STRIPE_PRICE_ID_PRO" "$NEXT_PUBLIC_STRIPE_PRICE_ID_PRO"
 echo ""
-echo "🔐 Granting Cloud Run access to secrets..."
 
-# Get project number
-PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
-
-# Grant access to all secrets
-for SECRET in GEMINI_API_KEY CLERK_PUBLISHABLE_KEY CLERK_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET; do
-    if gcloud secrets describe $SECRET &>/dev/null; then
-        gcloud secrets add-iam-policy-binding $SECRET \
-            --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-            --role="roles/secretmanager.secretAccessor" \
-            --quiet 2>/dev/null || true
-        echo "  ✓ Granted access to: $SECRET"
-    fi
-done
-
+echo "✅ All secrets configured successfully!"
 echo ""
-echo "✅ Secrets setup complete!"
+echo "📋 List all secrets:"
+echo "   gcloud secrets list --project=$PROJECT_ID"
 echo ""
-echo "📝 Next steps:"
-echo "   1. Run './deploy.sh' to deploy your application"
-echo "   2. After deployment, update Stripe webhook secret if needed:"
-echo "      echo -n 'your_webhook_secret' | gcloud secrets versions add STRIPE_WEBHOOK_SECRET --data-file=-"
+echo "🔍 View a secret value (example):"
+echo "   gcloud secrets versions access latest --secret=GEMINI_API_KEY --project=$PROJECT_ID"
+echo ""
+echo "🚀 Next step: Run ./deploy.sh to deploy to Cloud Run"
 echo ""

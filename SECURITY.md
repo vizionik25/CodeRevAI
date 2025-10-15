@@ -1,167 +1,215 @@
-# Security Checklist for CodeRevAI
+# Security Implementation Report
 
-## ✅ Files Properly Gitignored
+## Overview
+This document outlines all security measures implemented in CodeRevAI based on the AI code review findings.
 
-All sensitive data files are excluded from version control via `.gitignore`:
+## ✅ Completed Security Fixes
 
-### Environment Variables
-- ✅ `.env`
-- ✅ `.env.local`
-- ✅ `.env.development.local`
-- ✅ `.env.test.local`
-- ✅ `.env.production.local`
-- ✅ `.env*.local` (all variations)
+### 1. **Protected Gemini API Key** (Priority: CRITICAL)
+**Issue**: NEXT_PUBLIC_GEMINI_API_KEY was exposed to client-side code, allowing anyone to steal and abuse the API key.
 
-### Certificates and Keys
-- ✅ `*.pem` (Private keys)
-- ✅ `*.key` (Key files)
-- ✅ `*.cert` (Certificates)
-- ✅ `*.crt` (Certificate files)
+**Solution**:
+- Moved all Gemini AI API calls to server-side Next.js API routes:
+  - `/app/api/review-code/route.ts` - Single file code review
+  - `/app/api/review-repo/route.ts` - Repository-wide review
+  - `/app/api/generate-diff/route.ts` - Code refactoring
+- Changed environment variable from `NEXT_PUBLIC_GEMINI_API_KEY` to `GEMINI_API_KEY` (server-side only)
+- Updated `/app/services/geminiService.ts` to call API routes instead of making direct AI calls
+- All API routes require Clerk authentication (`userId` check)
 
-### Credentials
-- ✅ `secrets/` directory
-- ✅ `secret.json`
-- ✅ `credentials.json`
-- ✅ `serviceAccountKey.json`
-
-### Zone Identifier Files
-- ✅ `*.Zone.Identifier` (Windows WSL artifacts)
-
-## 🔐 Sensitive Files in This Project
-
-### Current Sensitive Files (DO NOT COMMIT)
-1. **`.env.local`** - Contains all API keys and secrets
-   - Gemini API Key
-   - Clerk Authentication Keys
-   - Stripe API Keys
-   - Webhook Secrets
-
-### Safe to Commit
-1. **`.env.example`** - Template without actual secrets ✅
-2. **`setup-secrets.sh`** - Script to configure secrets (no secrets inside) ✅
-3. **`deploy.sh`** - Deployment script (no secrets inside) ✅
-
-## 🚨 Before Committing Code
-
-### Pre-Commit Checklist
-
-```bash
-# 1. Verify .env.local is gitignored
-git status | grep -q ".env.local" && echo "⚠️  WARNING: .env.local is being tracked!" || echo "✅ .env.local is properly ignored"
-
-# 2. Check for accidentally staged secrets
-git diff --cached | grep -i "api[_-]key\|secret\|password\|token" && echo "⚠️  WARNING: Possible secrets in staged changes!" || echo "✅ No obvious secrets found"
-
-# 3. Search for hardcoded API keys in code
-grep -r "AIzaSy" --include="*.ts" --include="*.tsx" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".next" && echo "⚠️  WARNING: Possible Gemini API key found!" || echo "✅ No hardcoded Gemini keys"
-grep -r "pk_live\|sk_live\|pk_test\|sk_test" --include="*.ts" --include="*.tsx" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".next" && echo "⚠️  WARNING: Possible Stripe key found!" || echo "✅ No hardcoded Stripe keys"
-grep -r "whsec_" --include="*.ts" --include="*.tsx" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".next" && echo "⚠️  WARNING: Possible webhook secret found!" || echo "✅ No hardcoded webhook secrets"
-```
-
-## 🔍 If Secrets Were Accidentally Committed
-
-If you've already committed secrets to git, follow these steps:
-
-### 1. Remove from Current Commit
-```bash
-# Remove file from staging
-git reset HEAD .env.local
-
-# Or amend last commit
-git commit --amend
-```
-
-### 2. Remove from History (if pushed)
-```bash
-# Using git-filter-repo (recommended)
-git filter-repo --path .env.local --invert-paths
-
-# Or using BFG Repo-Cleaner
-bfg --delete-files .env.local
-
-# Force push (⚠️ Be careful!)
-git push origin --force --all
-```
-
-### 3. Rotate All Compromised Secrets
-- **Gemini API Key**: Create new key at https://aistudio.google.com/app/apikey
-- **Clerk Keys**: Rotate in https://dashboard.clerk.com/
-- **Stripe Keys**: Rotate in https://dashboard.stripe.com/
-- **Update** `.env.local` with new keys
-- **Update** Google Cloud Secret Manager if deployed
-
-## 🛡️ Security Best Practices
-
-### For Development
-1. ✅ Never hardcode API keys in source code
-2. ✅ Use environment variables for all secrets
-3. ✅ Keep `.env.local` out of version control
-4. ✅ Use `.env.example` as a template for team members
-5. ✅ Add secrets to `.gitignore` before initializing git
-
-### For Production (Cloud Run)
-1. ✅ Use Google Cloud Secret Manager (not environment variables)
-2. ✅ Enable VPC Service Controls for additional security
-3. ✅ Restrict IAM permissions (principle of least privilege)
-4. ✅ Enable Cloud Armor for DDoS protection
-5. ✅ Monitor secret access with Cloud Audit Logs
-
-### For Team Collaboration
-1. Share `.env.example` file (no actual secrets)
-2. Document how to obtain API keys
-3. Use separate keys for each developer (if possible)
-4. Never send secrets via email/Slack
-5. Use secure secret sharing tools (1Password, LastPass, etc.)
-
-## 📋 Environment Variable Security Levels
-
-| Variable | Security Level | Exposed to Browser? | Git Safe? |
-|----------|----------------|---------------------|-----------|
-| `NEXT_PUBLIC_GEMINI_API_KEY` | ⚠️ Medium | Yes (NEXT_PUBLIC_*) | ❌ No |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅ Low | Yes (Public key) | ⚠️ Caution |
-| `CLERK_SECRET_KEY` | 🔴 High | No | ❌ No |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | ✅ Low | Yes (Public key) | ⚠️ Caution |
-| `STRIPE_SECRET_KEY` | 🔴 High | No | ❌ No |
-| `STRIPE_WEBHOOK_SECRET` | 🔴 High | No | ❌ No |
-
-**Note:** Even "public" keys should not be committed to version control as a best practice.
-
-## 🔐 API Key Security
-
-### If API Key is Exposed
-1. **Immediately revoke** the exposed key
-2. **Generate new key** from the provider
-3. **Update** `.env.local` and Secret Manager
-4. **Redeploy** application
-5. **Monitor** for unauthorized usage
-
-### Stripe Specific
-- Use test keys (`pk_test_`, `sk_test_`) for development
-- Use live keys (`pk_live_`, `sk_live_`) only in production
-- Enable Stripe Dashboard notifications for suspicious activity
-
-### Clerk Specific
-- Publishable keys are safe to expose (but still avoid it)
-- Secret keys must NEVER be exposed to browser/frontend
-- Rotate keys if compromised
-
-## 🎯 Quick Security Audit
-
-Run this command before committing:
-
-```bash
-# Check for common secrets in staged files
-git diff --cached | grep -E "(api[_-]?key|secret|password|token|private[_-]?key)" -i
-```
-
-## 📚 Additional Resources
-
-- [OWASP API Security](https://owasp.org/www-project-api-security/)
-- [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning)
-- [Google Cloud Secret Manager](https://cloud.google.com/secret-manager/docs)
-- [Stripe Security](https://stripe.com/docs/security)
-- [Clerk Security](https://clerk.com/docs/security)
+**Files Modified**:
+- `/app/api/review-code/route.ts` (created)
+- `/app/api/review-repo/route.ts` (created)
+- `/app/api/generate-diff/route.ts` (created)
+- `/app/services/geminiService.ts` (rewritten)
+- `/.env.example` (updated)
 
 ---
 
-**Remember:** Security is not a one-time setup, it's an ongoing practice! 🔐
+### 2. **Input Validation & Sanitization** (Priority: HIGH)
+**Issue**: User inputs (code, prompts, language) were not validated or sanitized, allowing potential injection attacks.
+
+**Solution**:
+Created comprehensive security utility module `/app/utils/security.ts` with:
+
+- `sanitizeInput()` - Removes null bytes, limits length, prevents DOS
+- `validateCodeInput()` - Validates code size (10 bytes - 100KB)
+- `validateCustomPrompt()` - Validates prompt size (max 5KB)
+- `validateLanguage()` - Whitelist of allowed programming languages
+- `validateReviewModes()` - Validates review mode selection
+- `validateRepoUrl()` - Only allows GitHub URLs with proper format
+
+All API routes now validate and sanitize inputs before processing.
+
+**Files Created/Modified**:
+- `/app/utils/security.ts` (created)
+- `/app/api/review-code/route.ts` (updated with validation)
+- `/app/api/review-repo/route.ts` (updated with validation)
+- `/app/api/generate-diff/route.ts` (updated with validation)
+
+---
+
+### 3. **Rate Limiting** (Priority: HIGH)
+**Issue**: API endpoints had no rate limiting, allowing potential abuse and DOS attacks.
+
+**Solution**:
+Implemented in-memory rate limiting for all API routes:
+
+- **review-code**: 20 requests/minute per user
+- **review-repo**: 5 requests/minute per user (more resource-intensive)
+- **generate-diff**: 15 requests/minute per user
+
+Rate limit information exposed via response headers:
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+Returns HTTP 429 when limit exceeded with reset time.
+
+**Note**: For production at scale, migrate to Redis-based rate limiting.
+
+**Files Modified**:
+- `/app/utils/security.ts` (rate limit logic)
+- `/app/api/review-code/route.ts` (rate limit check)
+- `/app/api/review-repo/route.ts` (rate limit check)
+- `/app/api/generate-diff/route.ts` (rate limit check)
+
+---
+
+### 4. **Sensitive File Filtering** (Priority: HIGH)
+**Issue**: Repository reviews could accidentally send sensitive files (.env, .key, credentials) to the AI.
+
+**Solution**:
+Implemented automatic sensitive file detection and filtering:
+
+**Filtered Patterns**:
+- Environment files: `.env*`, `.env.local`, `.env.production`
+- Key files: `.key`, `.pem`, `.pfx`, `.p12`, `.asc`, `.gpg`
+- Credential patterns: files containing "secret", "credential", "password", "api_key", "auth_token"
+- Config files: `.npmrc`, `.pypirc`, `.aws/credentials`, `.ssh/`, `.gnupg/`
+- Database files: `.db`, `.sqlite`, `.sqlite3`
+- Build/dependency dirs: `node_modules/`, `.git/`, `.next/`, `dist/`, `build/`
+
+All repository reviews now automatically filter out sensitive files before sending to AI.
+
+**Files Modified**:
+- `/app/utils/security.ts` (`isSensitiveFile()`, `filterSensitiveFiles()`)
+- `/app/api/review-repo/route.ts` (applies filtering)
+
+---
+
+### 5. **File Upload Validation** (Priority: HIGH)
+**Issue**: Local file uploads had no size or type restrictions, allowing potential malicious file uploads.
+
+**Solution**:
+- **File Size Limit**: 1MB per file maximum
+- **File Type Whitelist**: Only allow safe code file extensions
+- **Validation on Read**: Check file size before reading content
+
+**Allowed Extensions**:
+`.js`, `.jsx`, `.ts`, `.tsx`, `.py`, `.java`, `.c`, `.cpp`, `.cs`, `.go`, `.rs`, `.rb`, `.php`, `.swift`, `.kt`, `.dart`, `.scala`, `.r`, `.sql`, `.html`, `.css`, `.json`, `.yaml`, `.yml`, `.xml`, `.sh`, `.bash`, `.ps1`, `.md`, `.txt`
+
+**Files Modified**:
+- `/app/services/localFileService.ts` (added validation)
+
+---
+
+### 6. **GitHub API Rate Limit Handling** (Priority: MEDIUM)
+**Issue**: No handling of GitHub API rate limits could cause application failures.
+
+**Solution**:
+Added rate limit detection and user-friendly error messages:
+- Checks HTTP 403 responses from GitHub API
+- Inspects `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers
+- Provides clear error message with reset time when limit exceeded
+
+**Files Modified**:
+- `/app/services/githubService.ts` (`fetchTree()`, `fetchFileContent()`)
+
+---
+
+## 🔄 Pending Security Improvements
+
+### 7. **Database for Stripe Webhooks** (Priority: MEDIUM)
+**Issue**: Stripe webhooks currently only log events without persisting subscription data, leading to potential state inconsistencies.
+
+**Recommended Solution**:
+1. Set up database (Prisma + PostgreSQL or Supabase recommended)
+2. Create schema for:
+   - `users` - User profiles
+   - `subscriptions` - Active subscriptions
+   - `payments` - Payment history
+3. Update `/app/api/webhooks/stripe/route.ts` to persist data
+4. Implement subscription status checks before API usage
+
+**Current Status**: TODO comments in webhook handler
+
+---
+
+## Security Best Practices Applied
+
+### Authentication
+- ✅ All API routes protected with Clerk authentication
+- ✅ User ID validation on every request
+- ✅ Unauthorized access returns HTTP 401
+
+### Input Security
+- ✅ All user inputs validated before processing
+- ✅ Inputs sanitized to remove dangerous characters
+- ✅ Maximum input sizes enforced
+- ✅ Whitelisted languages and file types
+
+### API Security
+- ✅ Rate limiting prevents abuse
+- ✅ Sensitive files filtered before AI processing
+- ✅ File size limits prevent DOS attacks
+- ✅ Error messages don't expose internal details
+
+### Environment Security
+- ✅ All secrets in `.gitignore`
+- ✅ API keys server-side only
+- ✅ No client-side exposure of credentials
+- ✅ `.env.example` documents required variables
+
+---
+
+## Testing Recommendations
+
+1. **Rate Limiting**: Test by making 21 requests in 1 minute
+2. **Input Validation**: Try submitting oversized code/prompts
+3. **Sensitive Files**: Try reviewing repo with `.env` file
+4. **File Upload**: Try uploading executable or oversized file
+5. **Authentication**: Test API routes without being logged in
+
+---
+
+## Production Deployment Checklist
+
+- [x] API keys in Secret Manager (not in code)
+- [x] All secrets in `.gitignore`
+- [x] Server-side only API key usage
+- [x] Authentication on all routes
+- [x] Rate limiting enabled
+- [x] Input validation active
+- [x] Sensitive file filtering
+- [ ] Database for Stripe webhooks
+- [ ] Redis for distributed rate limiting
+- [ ] Monitoring & alerting setup
+- [ ] Security headers configured
+
+---
+
+## Additional Recommendations
+
+1. **HTTPS Enforcement**: Ensure all traffic uses HTTPS in production
+2. **CORS Configuration**: Set proper CORS headers for API routes
+3. **Security Headers**: Add helmet.js or Next.js security headers
+4. **Audit Logging**: Log all API usage for security monitoring
+5. **DDoS Protection**: Use Cloudflare or similar CDN
+6. **Dependency Scanning**: Regular `npm audit` and Dependabot
+7. **Penetration Testing**: Conduct security audit before launch
+
+---
+
+**Last Updated**: Based on AI code review from self-analysis
+**Status**: 6 out of 7 critical security issues resolved ✅

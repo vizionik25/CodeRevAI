@@ -36,18 +36,24 @@ MIN_INSTANCES="0"
 TIMEOUT="300"
 
 # Build and deploy
-echo "🔨 Building and deploying..."
+echo "🔨 Building Docker image with Cloud Build..."
+gcloud builds submit \
+  --config cloudbuild.yaml
+
+echo ""
+echo "🚀 Deploying to Cloud Run..."
 gcloud run deploy $SERVICE_NAME \
-  --source . \
+  --image gcr.io/$PROJECT_ID/coderevai:latest \
   --region $REGION \
   --platform managed \
   --allow-unauthenticated \
   --set-env-vars NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1 \
   --update-secrets \
-NEXT_PUBLIC_GEMINI_API_KEY=GEMINI_API_KEY:latest,\
+GEMINI_API_KEY=GEMINI_API_KEY:latest,\
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=CLERK_PUBLISHABLE_KEY:latest,\
 CLERK_SECRET_KEY=CLERK_SECRET_KEY:latest,\
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=STRIPE_PUBLISHABLE_KEY:latest,\
+NEXT_PUBLIC_STRIPE_PRICE_ID_PRO=STRIPE_PRICE_ID_PRO:latest,\
 STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,\
 STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest \
   --max-instances $MAX_INSTANCES \

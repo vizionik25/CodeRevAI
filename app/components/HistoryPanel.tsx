@@ -1,5 +1,5 @@
 import React from 'react';
-import { HistoryItem } from '../types';
+import { HistoryItem } from '../../types';
 
 interface HistoryPanelProps {
   isOpen: boolean;

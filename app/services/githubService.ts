@@ -28,6 +28,18 @@ function getLanguageForFile(filePath: string): Language | undefined {
 
 async function fetchTree(owner: string, repo: string, branch: string) {
     const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+    
+    // Check for rate limiting
+    if (res.status === 403) {
+        const rateLimitRemaining = res.headers.get('X-RateLimit-Remaining');
+        const rateLimitReset = res.headers.get('X-RateLimit-Reset');
+        
+        if (rateLimitRemaining === '0' && rateLimitReset) {
+            const resetDate = new Date(parseInt(rateLimitReset) * 1000);
+            throw new Error(`GitHub API rate limit exceeded. Resets at ${resetDate.toLocaleTimeString()}`);
+        }
+    }
+    
     if (!res.ok) {
         throw new Error(`Could not fetch repository tree for branch ${branch}. Status: ${res.status}`);
     }
@@ -65,6 +77,18 @@ export async function fetchRepoFiles(owner: string, repo: string): Promise<CodeF
 
 export async function fetchFileContent(owner: string, repo: string, path: string): Promise<string> {
     const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}`);
+    
+    // Check for rate limiting
+    if (res.status === 403) {
+        const rateLimitRemaining = res.headers.get('X-RateLimit-Remaining');
+        const rateLimitReset = res.headers.get('X-RateLimit-Reset');
+        
+        if (rateLimitRemaining === '0' && rateLimitReset) {
+            const resetDate = new Date(parseInt(rateLimitReset) * 1000);
+            throw new Error(`GitHub API rate limit exceeded. Resets at ${resetDate.toLocaleTimeString()}`);
+        }
+    }
+    
     if (!res.ok) {
         throw new Error(`Could not fetch file content for ${path}. Status: ${res.status}`);
     }

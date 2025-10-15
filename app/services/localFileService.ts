@@ -1,8 +1,25 @@
 import { LANGUAGES } from '../../constants';
 import { CodeFile, Language } from '../../types';
 
+// Maximum file size: 1MB per file
+const MAX_FILE_SIZE = 1024 * 1024;
+
+// Allowed file extensions (security measure)
+const ALLOWED_EXTENSIONS = [
+  '.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.c', '.cpp', '.cs',
+  '.go', '.rs', '.rb', '.php', '.swift', '.kt', '.dart', '.scala',
+  '.r', '.sql', '.html', '.css', '.json', '.yaml', '.yml', '.xml',
+  '.sh', '.bash', '.ps1', '.md', '.txt'
+];
+
 function getLanguageForFile(filePath: string): Language | undefined {
     const extension = '.' + filePath.split('.').pop()?.toLowerCase();
+    
+    // Security check: only allow known safe file types
+    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+        return undefined;
+    }
+    
     return LANGUAGES.find(lang => lang.extensions.includes(extension));
 }
 
@@ -51,6 +68,12 @@ export async function openDirectoryAndGetFiles(): Promise<{directoryHandle: File
 
 function readFileAsText(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
+        // Security check: validate file size
+        if (file.size > MAX_FILE_SIZE) {
+            reject(new Error(`File ${file.name} is too large (max ${MAX_FILE_SIZE / 1024}KB)`));
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = () => reject(reader.error);
@@ -98,6 +121,12 @@ export async function readFileContent(file: CodeFile): Promise<string> {
     }
     try {
         const fileObject = await file.handle.getFile();
+        
+        // Security check: validate file size
+        if (fileObject.size > MAX_FILE_SIZE) {
+            throw new Error(`File ${file.path} is too large (max ${MAX_FILE_SIZE / 1024}KB)`);
+        }
+        
         return await fileObject.text();
     } catch (err) {
         console.error('Error reading file content:', err);
