@@ -7,11 +7,24 @@ import { redirectToCheckout } from './utils/stripeUtils';
 export default function LandingPage() {
   const { isSignedIn } = useUser();
 
+  // Stripe Price IDs - Configure these in your environment or here
+  // Get these from your Stripe Dashboard after creating products
+  const STRIPE_PRICE_IDS = {
+    pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
+  };
+
   const handleSubscribe = async (plan: string, priceId: string) => {
     if (!isSignedIn) {
       alert('Please sign in first to subscribe');
       return;
     }
+    
+    if (!priceId) {
+      alert('Stripe is not configured yet. Please set up your Stripe Price IDs.');
+      console.error('Missing Stripe Price ID for plan:', plan);
+      return;
+    }
+    
     await redirectToCheckout(priceId, plan);
   };
 
@@ -252,7 +265,7 @@ export default function LandingPage() {
               </SignedOut>
               <SignedIn>
                 <button 
-                  onClick={() => handleSubscribe('pro', 'price_pro_monthly_placeholder')}
+                  onClick={() => handleSubscribe('pro', STRIPE_PRICE_IDS.pro)}
                   className="w-full px-6 py-3 bg-white text-indigo-600 hover:bg-gray-100 rounded-lg font-semibold transition-colors"
                 >
                   Upgrade Now

@@ -31,12 +31,14 @@ STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 3. Create your pricing plans (e.g., "Pro Plan")
 4. Add recurring prices (e.g., $29/month)
 5. Copy the **Price ID** (starts with `price_`)
-6. Update the `handleSubscribe` function in `app/page.tsx` with your actual price IDs:
+6. Add the Price ID to your `.env.local` file:
 
-```typescript
-// Replace 'price_pro_monthly_placeholder' with your actual Stripe Price ID
-onClick={() => handleSubscribe('pro', 'price_1234567890')}
+```bash
+# Add this to your .env.local file
+NEXT_PUBLIC_STRIPE_PRICE_ID_PRO=price_your_actual_price_id_here
 ```
+
+The application will automatically use this environment variable for the Pro plan subscription button.
 
 ## Step 4: Set Up Webhooks
 
