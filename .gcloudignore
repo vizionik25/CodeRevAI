@@ -61,9 +61,5 @@ README.md
 # Zone Identifier files
 *.Zone.Identifier
 
-# Docker files (not needed when using Cloud Build)
-Dockerfile
-.dockerignore
-
 # Misc
 *.pem

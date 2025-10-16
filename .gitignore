@@ -127,3 +127,5 @@ stripe-cli-*
 # Misc
 .serverless/
 .fusebox/
+CodeRevAI-codereview.md
+IMPLEMENTATION_PLAN.md
