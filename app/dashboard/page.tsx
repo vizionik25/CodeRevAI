@@ -7,13 +7,14 @@ import Notification from '../components/Notification';
 import { HistoryPanel } from '../components/HistoryPanel';
 import { reviewCode, reviewRepository } from '../services/geminiService';
 import { getHistory, addHistoryItem, clearHistory } from '../services/historyService';
-import { LANGUAGES } from '../../constants';
-import { CodeFile, HistoryItem } from '../../types';
+import { LANGUAGES } from '@/app/data/constants';
+import { CodeFile, HistoryItem } from '@/app/types';
 
 export default function HomePage() {
   const [feedback, setFeedback] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorContext, setErrorContext] = useState<'review' | 'diff' | 'file' | 'network' | 'auth' | 'rate-limit' | undefined>(undefined);
   const [selectedFile, setSelectedFile] = useState<CodeFile | null>(null);
   const [code, setCode] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -31,11 +32,13 @@ export default function HomePage() {
   const handleReview = useCallback(async (codeToReview: string, language: string, prompt: string) => {
     if (!codeToReview.trim()) {
       setError("Cannot review empty code.");
+      setErrorContext('file');
       return;
     }
     setIsLoading(true);
     setFeedback('');
     setError(null);
+    setErrorContext(undefined);
     setReviewType('file');
     try {
       const review = await reviewCode(codeToReview, language, prompt, reviewMode);
@@ -60,6 +63,16 @@ export default function HomePage() {
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       setError(`Failed to get review: ${errorMessage}`);
+      // Detect error context from error message
+      if (errorMessage.toLowerCase().includes('rate limit')) {
+        setErrorContext('rate-limit');
+      } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
+        setErrorContext('auth');
+      } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+        setErrorContext('network');
+      } else {
+        setErrorContext('review');
+      }
       console.error(e);
     } finally {
       setIsLoading(false);
@@ -70,6 +83,7 @@ export default function HomePage() {
     setIsLoading(true);
     setFeedback('');
     setError(null);
+    setErrorContext(undefined);
     setReviewType('repo');
     setSelectedFile(null);
     setCode('');
@@ -93,6 +107,16 @@ export default function HomePage() {
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       setError(`Failed to get review: ${errorMessage}`);
+      // Detect error context
+      if (errorMessage.toLowerCase().includes('rate limit')) {
+        setErrorContext('rate-limit');
+      } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
+        setErrorContext('auth');
+      } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+        setErrorContext('network');
+      } else {
+        setErrorContext('review');
+      }
       console.error(e);
     } finally {
       setIsLoading(false);

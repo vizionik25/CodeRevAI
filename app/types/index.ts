@@ -44,6 +44,7 @@ export interface ReviewMode {
 
 export interface ReviewModeGroup {
     name: string;
+    description?: string; // Optional group-level description
     modes: ReviewMode[];
 }
 

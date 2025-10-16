@@ -10,6 +10,7 @@ import {
   filterSensitiveFiles,
   checkRateLimit,
 } from '@/app/utils/security';
+import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
 
 // Lazy initialize Gemini AI to avoid build-time errors
 let ai: GoogleGenAI | null = null;
@@ -19,44 +20,6 @@ function getAI() {
   }
   return ai;
 }
-
-const PROMPT_INSTRUCTIONS: Record<string, string> = {
-  comprehensive: `
-    Provide a comprehensive review covering the following aspects:
-    1.  **Bugs and Errors**: Identify any potential bugs, logic errors, or edge cases that might have been missed.
-    2.  **Performance**: Suggest optimizations for performance bottlenecks, inefficient algorithms, or excessive resource usage.
-    3.  **Security**: Point out any security vulnerabilities such as injection flaws, insecure handling of credentials, or other common weaknesses.
-    4.  **Best Practices & Readability**: Comment on code style, naming conventions, and overall readability.
-    5.  **Maintainability**: Assess the code's structure for long-term maintainability and suggest refactoring where necessary.
-
-    Format your feedback clearly using Markdown.
-  `,
-  bug_fixes: `
-    Focus exclusively on identifying potential bugs, logic errors, and edge cases.
-    Provide clear explanations and suggest corrected code snippets.
-    Format your feedback clearly using Markdown.
-  `,
-  performance: `
-    Focus exclusively on performance optimization.
-    Identify bottlenecks, inefficient algorithms, or excessive resource usage.
-    Format your feedback clearly using Markdown.
-  `,
-  security: `
-    Focus exclusively on security vulnerabilities and potential exploits.
-    Look for: injection flaws (SQL, XSS, etc.), insecure handling of credentials, authentication issues, authorization bypasses, insecure deserialization, and other common security weaknesses.
-    Format your feedback clearly using Markdown.
-  `,
-  best_practices: `
-    Focus exclusively on code style, best practices, and readability.
-    Comment on: naming conventions, code structure, design patterns, and overall code clarity.
-    Format your feedback clearly using Markdown.
-  `,
-  test_generation: `
-    Generate comprehensive unit tests for the provided code.
-    Cover: edge cases, error handling, happy paths, and boundary conditions.
-    Format your tests clearly using Markdown and code blocks.
-  `,
-};
 
 function buildRepoPrompt(files: Array<{ path: string; content: string }>, repoUrl: string, customPrompt: string, modes: string[]): string {
   const fileManifest = files.map(f => `- ${f.path}`).join('\n');

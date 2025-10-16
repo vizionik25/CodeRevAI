@@ -1,5 +1,5 @@
-import { LANGUAGES } from '../../constants';
-import { CodeFile, GitHubTreeFile, GitHubContent, Language } from '../../types';
+import { LANGUAGES } from '@/app/data/constants';
+import { CodeFile, GitHubTreeFile, GitHubContent, Language } from '@/app/types';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 

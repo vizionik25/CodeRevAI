@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CodeFile } from '../../types';
+import { CodeFile } from '@/app/types';
 import { fetchRepoFiles, fetchFileContent, parseGitHubUrl } from '../services/githubService';
 import { openDirectoryAndGetFiles, readFileContent, getFilesFromInput } from '../services/localFileService';
 import { SparklesIcon } from './icons/SparklesIcon';

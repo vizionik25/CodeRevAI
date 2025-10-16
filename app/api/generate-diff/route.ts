@@ -7,6 +7,7 @@ import {
   validateLanguage,
   checkRateLimit,
 } from '@/app/utils/security';
+import { cleanMarkdownFences } from '@/app/utils/markdown';
 
 // Lazy initialize Gemini AI to avoid build-time errors
 let ai: GoogleGenAI | null = null;
@@ -121,15 +122,8 @@ Return the complete, refactored code now.
 
     let modifiedCode = response.text || '';
 
-    // Clean up potential markdown fences
-    const codeBlockRegex = new RegExp("```(?:" + sanitizedLanguage.toLowerCase() + ")?\\n([\\s\\S]*?)\\n```", "g");
-    const matches = [...modifiedCode.matchAll(codeBlockRegex)];
-    
-    if (matches.length > 0) {
-        modifiedCode = matches.map(match => match[1]).join('\n');
-    } else {
-        modifiedCode = modifiedCode.replace(/```/g, '');
-    }
+    // Clean up potential markdown fences using utility function
+    modifiedCode = cleanMarkdownFences(modifiedCode, sanitizedLanguage);
 
     return NextResponse.json(
       { modifiedCode: modifiedCode.trim() },

@@ -1,5 +1,13 @@
 // Security utilities for input validation and sanitization
 
+// Global sanity limit for any text input (prompts, metadata, etc.)
+// This prevents DoS attacks from extremely large text inputs
+const GLOBAL_INPUT_SANITY_LIMIT = 50000; // 50KB
+
+// Maximum code length for AI review (can be larger as it's raw code)
+// Code files are typically larger than prompts/metadata
+const MAX_CODE_LENGTH = 100000; // 100KB
+
 /**
  * Sanitize user input to prevent injection attacks
  * Removes potentially dangerous characters and patterns
@@ -11,9 +19,8 @@ export function sanitizeInput(input: string): string {
   let sanitized = input.replace(/\0/g, '');
   
   // Limit length to prevent DOS
-  const MAX_LENGTH = 50000; // 50KB max
-  if (sanitized.length > MAX_LENGTH) {
-    sanitized = sanitized.substring(0, MAX_LENGTH);
+  if (sanitized.length > GLOBAL_INPUT_SANITY_LIMIT) {
+    sanitized = sanitized.substring(0, GLOBAL_INPUT_SANITY_LIMIT);
   }
   
   return sanitized.trim();
@@ -27,8 +34,8 @@ export function validateCodeInput(code: string): { valid: boolean; error?: strin
     return { valid: false, error: 'Code must be a non-empty string' };
   }
   
-  if (code.length > 100000) { // 100KB max for single file
-    return { valid: false, error: 'Code exceeds maximum size of 100KB' };
+  if (code.length > MAX_CODE_LENGTH) {
+    return { valid: false, error: `Code exceeds maximum size of ${MAX_CODE_LENGTH / 1000}KB` };
   }
   
   if (code.length < 10) {
@@ -90,7 +97,7 @@ export function validateReviewModes(modes: any): { valid: boolean; error?: strin
   
   const validModes = [
     'comprehensive', 'bug_fixes', 'performance', 'security',
-    'style', 'test_generation', 'production_ready'
+    'best_practices', 'test_generation', 'production_ready'
   ];
   
   for (const mode of modes) {

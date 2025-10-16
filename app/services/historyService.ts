@@ -1,4 +1,4 @@
-import { HistoryItem } from '../../types';
+import { HistoryItem } from '@/app/types';
 
 const HISTORY_KEY = 'codeReviewHistory';
 

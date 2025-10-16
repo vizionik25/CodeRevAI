@@ -1,5 +1,5 @@
 import React from 'react';
-import { LANGUAGE_OVERRIDE_OPTIONS } from '../../constants';
+import { LANGUAGE_OVERRIDE_OPTIONS } from '@/app/data/constants';
 
 interface LanguageOverrideSelectorProps {
   value: string;

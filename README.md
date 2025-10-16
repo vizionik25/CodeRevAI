@@ -61,7 +61,7 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret_here
 5. Paste them into your `.env.local` file
 
 **Stripe Payments (Optional):**
-See [STRIPE_SETUP.md](./STRIPE_SETUP.md) for detailed setup instructions.
+See [docs/STRIPE_INTEGRATION.md](./docs/STRIPE_INTEGRATION.md) for detailed setup instructions.
 
 ### 3. Run the development server:
 ```bash
@@ -83,8 +83,8 @@ The app will be available at [http://localhost:3000](http://localhost:3000)
 ```
 
 For detailed deployment instructions, see:
+- **Full Guide:** [DEPLOYMENT.md](./DEPLOYMENT.md) - Complete deployment documentation
 - **Quick Start:** [QUICKSTART.md](./QUICKSTART.md) - Deploy in 3 steps
-- **Full Guide:** [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) - Complete deployment documentation
 
 ### Other Platforms
 
@@ -99,9 +99,9 @@ Make sure to set the environment variables in your deployment platform's setting
 
 ## Documentation
 
-- 📖 [Deployment Guide](./DEPLOYMENT_GUIDE.md) - Complete Google Cloud Run deployment guide
+- 📖 [Deployment Guide](./DEPLOYMENT.md) - Complete Google Cloud Run deployment guide
 - 🚀 [Quick Start](./QUICKSTART.md) - Deploy in 3 steps
-- 💳 [Stripe Setup](./STRIPE_SETUP.md) - Payment integration guide
+- 💳 [Stripe Integration](./docs/STRIPE_INTEGRATION.md) - Payment integration guide
 - 🔐 [Security](./SECURITY.md) - Security best practices and guidelines
 
 ## Security

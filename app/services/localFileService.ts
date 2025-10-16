@@ -1,5 +1,5 @@
-import { LANGUAGES } from '../../constants';
-import { CodeFile, Language } from '../../types';
+import { LANGUAGES } from '@/app/data/constants';
+import { CodeFile, Language } from '@/app/types';
 
 // Maximum file size: 1MB per file
 const MAX_FILE_SIZE = 1024 * 1024;

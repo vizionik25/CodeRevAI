@@ -4,8 +4,10 @@ import ReactDiffViewer from 'react-diff-viewer';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
+import { LoadingState } from './LoadingState';
+import { ErrorMessage } from './ErrorMessage';
 import { LoaderIcon } from './icons/LoaderIcon';
-import { CodeFile } from '../../types';
+import { CodeFile } from '@/app/types';
 import { downloadFile } from '../utils/fileUtils';
 import { generateFullCodeFromReview } from '../services/geminiService';
 import { saveFileWithBakExtension } from '../services/localFileService';
@@ -103,14 +105,7 @@ export const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ feedback, isLo
 
   const renderContent = () => {
     if (isLoading) {
-      return (
-        <div className="flex items-center justify-center h-full text-gray-400">
-          <div className="flex flex-col items-center gap-4">
-            <LoaderIcon />
-            <span className="text-lg">Generating feedback...</span>
-          </div>
-        </div>
-      );
+      return <LoadingState type="review" showProgress={true} />;
     }
 
     if (!feedback) {
@@ -119,14 +114,7 @@ export const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ feedback, isLo
 
     if (viewMode === 'diff' && reviewType === 'file') {
       if (isGeneratingDiff) {
-        return (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="flex flex-col items-center gap-4">
-              <LoaderIcon />
-              <span className="text-lg">Applying suggestions...</span>
-            </div>
-          </div>
-        );
+        return <LoadingState type="diff" showProgress={true} />;
       }
       return (
         <div className="flex flex-col h-full bg-gray-800">

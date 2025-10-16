@@ -1,6 +1,6 @@
 import React from 'react';
-import { REVIEW_MODE_GROUPS } from '../../constants';
-import { ReviewModeGroup, ReviewMode } from '../../types';
+import { REVIEW_MODE_GROUPS } from '@/app/data/constants';
+import { ReviewModeGroup, ReviewMode } from '@/app/types';
 
 interface ReviewModeSelectorProps {
   selectedModes: string[];
@@ -58,8 +58,13 @@ export const ReviewModeSelector: React.FC<ReviewModeSelectorProps> = ({ selected
       </div>
 
       {REVIEW_MODE_GROUPS.map((group) => (
-        <div key={group.name}>
-          <h4 className="text-xs font-bold uppercase text-gray-500 mb-2">{group.name}</h4>
+        <div key={group.name} className="space-y-2">
+          <div>
+            <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider">{group.name}</h4>
+            {group.description && (
+              <p className="text-xs text-gray-500 mt-0.5">{group.description}</p>
+            )}
+          </div>
           <div className="space-y-2">
             {group.modes.map((mode) => {
               const isChecked = selectedModes.includes(mode.value);
