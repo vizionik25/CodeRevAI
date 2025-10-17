@@ -139,6 +139,7 @@ code-review-*.md
 
 # Implementation and planning docs (internal only)
 IMPLEMENTATION_PLAN.md
+SECURITY.md
 TODO.md
 NOTES.md
 
