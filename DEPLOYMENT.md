@@ -82,11 +82,9 @@ Your app will be live in ~5-10 minutes at `https://coderevai-xxxxx.run.app`   ``
 
    ```bash
 
-   # Install from https://cloud.google.com/sdk/docs/install```bash
-
-   gcloud --version./setup-secrets.sh
-
-   gcloud auth login```
+   # Install from https://cloud.google.com/sdk/docs/install
+   gcloud --version
+   gcloud auth login
 
    ```
 
@@ -122,11 +120,11 @@ This will:
 
 
 
-Create a `.env.local` file with:```bash
+Create a `.env.local` file with your API keys, then run:
 
-./deploy.sh
-
-```bash```
+```bash
+./scripts/deploy.sh
+```
 
 # AI Service
 
@@ -344,9 +342,9 @@ git pull origin main
 
 # Rebuild and redeploy
 
-```bash./deploy.sh
-
-./scripts/deploy.sh```
+```bash
+./scripts/deploy.sh
+```
 
 ```
 
@@ -510,11 +508,9 @@ Quick steps:
 
 ```bash
 
-# Get service URL```bash
-
-SERVICE_URL=$(gcloud run services describe coderevai --region us-central1 --format='value(status.url)')./setup-secrets.sh
-
-echo "Your app: $SERVICE_URL"./deploy.sh
+# Get service URL
+SERVICE_URL=$(gcloud run services describe coderevai --region us-central1 --format='value(status.url)')
+echo "Your app: $SERVICE_URL"
 
 ```
 

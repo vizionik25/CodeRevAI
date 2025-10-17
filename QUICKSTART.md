@@ -27,7 +27,7 @@ gcloud services enable secretmanager.googleapis.com
 
 ```bash
 # Run the setup script
-./setup-secrets.sh
+./scripts/setup-secrets.sh
 ```
 
 This will prompt you for:
@@ -42,7 +42,7 @@ This will prompt you for:
 
 ```bash
 # Deploy to Cloud Run
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 That's it! Your app will be deployed and you'll get a URL like:
@@ -63,7 +63,7 @@ That's it! Your app will be deployed and you'll get a URL like:
   ```bash
   echo -n "whsec_xxx" | gcloud secrets versions add STRIPE_WEBHOOK_SECRET --data-file=-
   ```
-- Redeploy: `./deploy.sh`
+- Redeploy: `./scripts/deploy.sh`
 
 ### 3. Test Your Application
 - Visit your Cloud Run URL
@@ -84,7 +84,7 @@ gcloud run services describe coderevai --region us-central1
 echo -n "new_value" | gcloud secrets versions add SECRET_NAME --data-file=-
 
 # Redeploy
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 ## Automated Deployments (Optional)
@@ -152,4 +152,4 @@ gcloud secrets get-iam-policy GEMINI_API_KEY
 
 ---
 
-**Ready to deploy?** Run `./setup-secrets.sh` then `./deploy.sh`! 🚀
+**Ready to deploy?** Run `./scripts/setup-secrets.sh` then `./scripts/deploy.sh`! 🚀

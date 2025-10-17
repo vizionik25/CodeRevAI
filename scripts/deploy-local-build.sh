@@ -5,6 +5,9 @@
 
 set -e
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 echo "🚀 Deploying CodeRevAI to Google Cloud Run (local build)..."
 echo ""
 

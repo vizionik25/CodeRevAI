@@ -5,6 +5,9 @@
 
 set -e  # Exit on error
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 echo "🔐 Setting up Google Cloud Secret Manager for CodeRevAI..."
 echo ""
 

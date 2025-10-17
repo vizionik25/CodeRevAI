@@ -76,10 +76,10 @@ The app will be available at [http://localhost:3000](http://localhost:3000)
 
 ```bash
 # 1. Set up secrets
-./setup-secrets.sh
+./scripts/setup-secrets.sh
 
 # 2. Deploy
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 For detailed deployment instructions, see:
@@ -110,7 +110,7 @@ Make sure to set the environment variables in your deployment platform's setting
 
 ```bash
 # Run security check before committing
-./check-security.sh
+./scripts/check-security.sh
 ```
 
 ### Protected Files (gitignored)

@@ -127,5 +127,51 @@ stripe-cli-*
 # Misc
 .serverless/
 .fusebox/
+
+# ============================================
+# SENSITIVE DATA - NEVER COMMIT
+# ============================================
+
+# Generated code review files (may contain sensitive code)
 CodeRevAI-codereview.md
+*-codereview.md
+code-review-*.md
+
+# Implementation and planning docs (internal only)
 IMPLEMENTATION_PLAN.md
+TODO.md
+NOTES.md
+
+# Backup files that may contain sensitive data
+*.backup
+*.bak
+*~.md
+.env.backup
+.env.bak
+
+# Google Cloud configuration files
+gcloud-config.json
+service-account*.json
+*-service-account.json
+application_default_credentials.json
+
+# Additional sensitive patterns
+auth.json
+config.local.*
+local-config.*
+*credentials*.json
+*secret*.json
+*private*.json
+
+# SSH and GPG keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.gpg
+*.asc
+
+# Personal notes and drafts
+PERSONAL_NOTES.md
+DRAFT*.md
+WIP*.md

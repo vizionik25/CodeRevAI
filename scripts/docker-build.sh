@@ -5,6 +5,9 @@
 
 set -e
 
+# Change to project root directory
+cd "$(dirname "$0")/.."
+
 echo "🐳 Building Docker image for CodeRevAI..."
 
 # Load environment variables from .env.local
