@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { GoogleGenAI } from '@google/genai';
 import {
   sanitizeInput,
   validateCodeInput,
@@ -8,15 +7,7 @@ import {
   checkRateLimit,
 } from '@/app/utils/security';
 import { cleanMarkdownFences } from '@/app/utils/markdown';
-
-// Lazy initialize Gemini AI to avoid build-time errors
-let ai: GoogleGenAI | null = null;
-function getAI() {
-  if (!ai && process.env.GEMINI_API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return ai;
-}
+import { getGeminiAI } from '@/app/utils/apiClients';
 
 export async function POST(req: Request) {
   try {
@@ -110,10 +101,7 @@ Return the complete, refactored code now.
 `;
 
     // Call Gemini AI
-    const aiInstance = getAI();
-    if (!aiInstance) {
-      throw new Error('Gemini API key not configured');
-    }
+    const aiInstance = getGeminiAI();
 
     const response = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',

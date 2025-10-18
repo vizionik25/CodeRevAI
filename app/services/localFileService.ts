@@ -1,8 +1,7 @@
 import { LANGUAGES } from '@/app/data/constants';
 import { CodeFile, Language } from '@/app/types';
 
-// Maximum file size: 1MB per file
-const MAX_FILE_SIZE = 1024 * 1024;
+import { FILE_SIZE_LIMITS } from '@/app/data/constants';
 
 // Allowed file extensions (security measure)
 const ALLOWED_EXTENSIONS = [
@@ -69,8 +68,8 @@ export async function openDirectoryAndGetFiles(): Promise<{directoryHandle: File
 function readFileAsText(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         // Security check: validate file size
-        if (file.size > MAX_FILE_SIZE) {
-            reject(new Error(`File ${file.name} is too large (max ${MAX_FILE_SIZE / 1024}KB)`));
+        if (file.size > FILE_SIZE_LIMITS.LOCAL_FILE_MAX) {
+            reject(new Error(`File ${file.name} is too large (max ${FILE_SIZE_LIMITS.LOCAL_FILE_MAX / 1024}KB)`));
             return;
         }
         
@@ -123,8 +122,8 @@ export async function readFileContent(file: CodeFile): Promise<string> {
         const fileObject = await file.handle.getFile();
         
         // Security check: validate file size
-        if (fileObject.size > MAX_FILE_SIZE) {
-            throw new Error(`File ${file.path} is too large (max ${MAX_FILE_SIZE / 1024}KB)`);
+        if (fileObject.size > FILE_SIZE_LIMITS.LOCAL_FILE_MAX) {
+            throw new Error(`File ${file.path} is too large (max ${FILE_SIZE_LIMITS.LOCAL_FILE_MAX / 1024}KB)`);
         }
         
         return await fileObject.text();

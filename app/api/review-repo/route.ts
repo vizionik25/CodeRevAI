@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { GoogleGenAI } from '@google/genai';
 import {
   sanitizeInput,
   validateCustomPrompt,
@@ -11,15 +10,8 @@ import {
   checkRateLimit,
 } from '@/app/utils/security';
 import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
-
-// Lazy initialize Gemini AI to avoid build-time errors
-let ai: GoogleGenAI | null = null;
-function getAI() {
-  if (!ai && process.env.GEMINI_API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return ai;
-}
+import { getGeminiAI } from '@/app/utils/apiClients';
+import { FILE_SIZE_LIMITS } from '@/app/data/constants';
 
 function buildRepoPrompt(files: Array<{ path: string; content: string }>, repoUrl: string, customPrompt: string, modes: string[]): string {
   const fileManifest = files.map(f => `- ${f.path}`).join('\n');
@@ -151,8 +143,8 @@ export async function POST(req: Request) {
       };
     });
 
-    // Check total repository size (200KB limit)
-    const sizeValidation = validateFileSize(sanitizedFiles.map(f => f.content).join(''), 200000);
+    // Check total repository size
+    const sizeValidation = validateFileSize(sanitizedFiles.map(f => f.content).join(''), FILE_SIZE_LIMITS.REPO_TOTAL_MAX);
     if (!sizeValidation.valid) {
       return NextResponse.json(
         { error: sizeValidation.error },
@@ -172,10 +164,7 @@ export async function POST(req: Request) {
     );
 
     // Call Gemini AI
-    const aiInstance = getAI();
-    if (!aiInstance) {
-      throw new Error('Gemini API key not configured');
-    }
+    const aiInstance = getGeminiAI();
 
     const response = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',

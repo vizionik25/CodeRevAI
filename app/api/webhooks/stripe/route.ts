@@ -1,28 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-
-// Lazy initialize Stripe to avoid build-time errors
-let stripe: Stripe | null = null;
-function getStripe() {
-  if (!stripe && process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-09-30.clover',
-    });
-  }
-  return stripe;
-}
+import { getStripe } from '@/app/utils/apiClients';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 export async function POST(req: NextRequest) {
   try {
-    const stripeInstance = getStripe();
-    if (!stripeInstance || !webhookSecret) {
+    if (!webhookSecret) {
       return NextResponse.json(
-        { error: 'Stripe is not configured' },
+        { error: 'Webhook secret is not configured' },
         { status: 500 }
       );
     }
+    
+    const stripeInstance = getStripe();
 
     const body = await req.text();
     const signature = req.headers.get('stripe-signature')!;

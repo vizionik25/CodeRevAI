@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { auth } from '@clerk/nextjs/server';
-
-// Lazy initialize Stripe to avoid build-time errors
-let stripe: Stripe | null = null;
-function getStripe() {
-  if (!stripe && process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-09-30.clover',
-    });
-  }
-  return stripe;
-}
+import { getStripe } from '@/app/utils/apiClients';
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,9 +23,6 @@ export async function POST(req: NextRequest) {
     }
 
     const stripeInstance = getStripe();
-    if (!stripeInstance) {
-      throw new Error('Stripe is not configured');
-    }
 
     // Create Checkout Session
     const session = await stripeInstance.checkout.sessions.create({
