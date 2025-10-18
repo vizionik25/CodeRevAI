@@ -9,9 +9,6 @@ const nextConfig = {
   // Compress responses
   compress: true,
   
-  // Performance optimizations
-  swcMinify: true,
-  
   // Image optimization (if using next/image)
   images: {
     domains: [],

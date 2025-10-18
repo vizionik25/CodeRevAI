@@ -29,6 +29,19 @@ fi
 echo "📦 Project: $PROJECT_ID"
 echo ""
 
+# Fetch public keys from Secret Manager for build-time substitution
+echo "🔑 Fetching public keys from Secret Manager..."
+CLERK_PUB_KEY=$(gcloud secrets versions access latest --secret="CLERK_PUBLISHABLE_KEY" 2>/dev/null || echo "")
+STRIPE_PUB_KEY=$(gcloud secrets versions access latest --secret="STRIPE_PUBLISHABLE_KEY" 2>/dev/null || echo "")
+STRIPE_PRICE_ID=$(gcloud secrets versions access latest --secret="STRIPE_PRICE_ID_PRO" 2>/dev/null || echo "")
+
+if [ -z "$CLERK_PUB_KEY" ] || [ -z "$STRIPE_PUB_KEY" ] || [ -z "$STRIPE_PRICE_ID" ]; then
+    echo "⚠️  Warning: Some secrets are missing. Build may fail."
+    echo "   Run ./scripts/setup-secrets.sh to configure secrets"
+fi
+
+echo ""
+
 # Configuration
 SERVICE_NAME="coderevai"
 REGION="us-central1"
@@ -41,7 +54,8 @@ TIMEOUT="300"
 # Build and deploy
 echo "🔨 Building Docker image with Cloud Build..."
 gcloud builds submit \
-  --config cloudbuild.yaml
+  --config cloudbuild.yaml \
+  --substitutions=_CLERK_PUBLISHABLE_KEY="$CLERK_PUB_KEY",_STRIPE_PUBLISHABLE_KEY="$STRIPE_PUB_KEY",_STRIPE_PRICE_ID_PRO="$STRIPE_PRICE_ID"
 
 echo ""
 echo "🚀 Deploying to Cloud Run..."

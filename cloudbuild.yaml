@@ -7,21 +7,17 @@ steps:
     args:
       - 'build'
       - '--build-arg'
-      - 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'
+      - 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$_CLERK_PUBLISHABLE_KEY'
       - '--build-arg'
-      - 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'
+      - 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$_STRIPE_PUBLISHABLE_KEY'
       - '--build-arg'
-      - 'NEXT_PUBLIC_STRIPE_PRICE_ID_PRO=$$NEXT_PUBLIC_STRIPE_PRICE_ID_PRO'
+      - 'NEXT_PUBLIC_STRIPE_PRICE_ID_PRO=$_STRIPE_PRICE_ID_PRO'
       - '-t'
       - 'gcr.io/$PROJECT_ID/coderevai:$BUILD_ID'
       - '-t'
       - 'gcr.io/$PROJECT_ID/coderevai:latest'
       - '.'
     timeout: 1200s
-    secretEnv: 
-      - 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'
-      - 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'
-      - 'NEXT_PUBLIC_STRIPE_PRICE_ID_PRO'
 
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -42,12 +38,8 @@ images:
 # Timeout for the entire build
 timeout: 1800s
 
-# Available secrets from Secret Manager
-availableSecrets:
-  secretManager:
-    - versionName: projects/$PROJECT_ID/secrets/CLERK_PUBLISHABLE_KEY/versions/latest
-      env: 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/STRIPE_PUBLISHABLE_KEY/versions/latest
-      env: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'
-    - versionName: projects/$PROJECT_ID/secrets/STRIPE_PRICE_ID_PRO/versions/latest
-      env: 'NEXT_PUBLIC_STRIPE_PRICE_ID_PRO'
+# Substitutions for secrets - populated from Secret Manager via deploy script
+substitutions:
+  _CLERK_PUBLISHABLE_KEY: ''
+  _STRIPE_PUBLISHABLE_KEY: ''
+  _STRIPE_PRICE_ID_PRO: ''
