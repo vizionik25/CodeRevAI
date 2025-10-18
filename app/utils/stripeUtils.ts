@@ -1,13 +1,9 @@
-import { loadStripe, Stripe } from '@stripe/stripe-js';
-
-let stripePromise: Promise<Stripe | null>;
-
-const getStripe = () => {
-  if (!stripePromise) {
-    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-  }
-  return stripePromise;
-};
+/**
+ * Stripe Checkout Utilities
+ * Handles redirecting users to Stripe Checkout using the modern API (2025-09-30+)
+ * No Stripe.js dependency needed - uses direct URL redirect as per Stripe's migration guide
+ * @see https://docs.stripe.com/changelog/clover/2025-09-30/remove-redirect-to-checkout
+ */
 
 export async function redirectToCheckout(priceId: string, plan: string) {
   try {
@@ -31,6 +27,7 @@ export async function redirectToCheckout(priceId: string, plan: string) {
     const { url } = await response.json();
 
     // Redirect to Stripe Checkout URL directly (modern approach for Stripe API 2025-09-30+)
+    // This replaces the deprecated stripe.redirectToCheckout() method
     if (url) {
       window.location.href = url;
     } else {
