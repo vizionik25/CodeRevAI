@@ -45,6 +45,8 @@ ${allCode}
 
 Your primary instructions are below. You must follow all sets of instructions provided.
 ${instructions}
+
+IMPORTANT: For every suggested change, please include a code snippet showing how to properly implement the change. Include a comment at the top of each snippet stating the path/to/file.ts & starting Line# - ending Line#. This will make the implementation process more efficient and less of a headache for the developer implementing the changes.
 `;
   
   if (customPrompt && customPrompt.trim()) {
