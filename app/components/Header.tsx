@@ -1,13 +1,33 @@
 import React from 'react';
 import Link from 'next/link';
-import { UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import { UserButton, SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { HistoryIcon } from './icons/HistoryIcon';
+import { redirectToCheckout } from '@/app/utils/stripeUtils';
 
 interface HeaderProps {
     onToggleHistory: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
+  const { user } = useUser();
+  
+  // Check if user has a pro subscription
+  const isPro = user?.publicMetadata?.plan === 'pro';
+  
+  // Get Pro price ID from environment
+  const STRIPE_PRICE_IDS = {
+    pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
+  };
+
+  const handleUpgradeClick = async () => {
+    if (!STRIPE_PRICE_IDS.pro) {
+      alert('Stripe is not configured yet. Please set up your Stripe Price IDs.');
+      return;
+    }
+    
+    await redirectToCheckout(STRIPE_PRICE_IDS.pro, 'pro');
+  };
+
   return (
     <header className="bg-gray-800 shadow-md">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -20,11 +40,22 @@ export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
             </h1>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/billing">
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors">
-              Billing
-            </button>
-          </Link>
+          <SignedIn>
+            {isPro ? (
+              <Link href="/billing">
+                <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors">
+                  Billing
+                </button>
+              </Link>
+            ) : (
+              <button 
+                onClick={handleUpgradeClick}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white font-semibold transition-colors"
+              >
+                Upgrade
+              </button>
+            )}
+          </SignedIn>
           <button
               onClick={onToggleHistory}
               className="p-2 rounded-full hover:bg-gray-700 transition-colors"
