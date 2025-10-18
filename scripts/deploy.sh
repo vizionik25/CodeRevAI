@@ -44,7 +44,7 @@ echo ""
 
 # Configuration
 SERVICE_NAME="coderevai"
-REGION="us-central1"
+REGION="us-south1"
 MEMORY="512Mi"
 CPU="1"
 MAX_INSTANCES="10"
