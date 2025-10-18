@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CodeFile } from '@/app/types';
-import { fetchRepoFiles, fetchFileContent } from '../services/githubService';
+import { fetchRepoFiles, fetchFileContent, fetchFilesWithContent } from '../services/githubService';
 import { parseGitHubUrl } from '@/app/utils/githubUtils';
 import { openDirectoryAndGetFiles, readFileContent, getFilesFromInput } from '../services/localFileService';
 import { SparklesIcon } from './icons/SparklesIcon';
@@ -233,7 +233,7 @@ export const CodeInput: React.FC<CodeInputProps> = ({
     if (file) {
       setError(null);
 
-      // If content is already loaded (from iframe fallback), use it.
+      // If content is already loaded (from iframe fallback or cached), use it.
       if (file.content) {
         setSelectedFile(file);
         return;
@@ -250,7 +250,11 @@ export const CodeInput: React.FC<CodeInputProps> = ({
             content = await fetchFileContent(parsed.owner, parsed.repo, file.path);
           }
         }
-        setSelectedFile({ ...file, content });
+        const fileWithContent = { ...file, content };
+        setSelectedFile(fileWithContent);
+        
+        // Update the files array to cache the content for future use
+        setFiles(files.map(f => f.path === filePath ? fileWithContent : f));
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
         setError(`Failed to fetch file content: ${errorMessage}`);
@@ -278,12 +282,18 @@ export const CodeInput: React.FC<CodeInputProps> = ({
         const parsed = parseGitHubUrl(repoUrl);
         if (!parsed) return;
 
-        const filesWithContent = await Promise.all(files.map(async (file) => {
-            const content = await fetchFileContent(parsed.owner, parsed.repo, file.path);
-            return { path: file.path, content };
-        }));
+        // Fetch content for files that don't have it cached yet
+        const filesWithContent = await fetchFilesWithContent(parsed.owner, parsed.repo, files);
+        
+        // Update the files state with cached content for future use
+        setFiles(filesWithContent);
+        
+        // Extract only path and content for the review API
+        const filesForReview = filesWithContent
+            .filter(file => file.content !== undefined) // Only include files that loaded successfully
+            .map(file => ({ path: file.path, content: file.content! }));
 
-        onRepoReview(filesWithContent, repoUrl, customPrompt);
+        onRepoReview(filesForReview, repoUrl, customPrompt);
 
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';

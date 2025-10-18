@@ -97,3 +97,37 @@ export async function fetchFileContent(owner: string, repo: string, path: string
         throw new Error("Failed to decode file content.");
     }
 }
+
+/**
+ * Fetch content for multiple files and cache them in the CodeFile objects
+ * This reduces repeated API calls and improves performance
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param files - Array of CodeFile objects to fetch content for
+ * @returns Array of CodeFile objects with content cached
+ */
+export async function fetchFilesWithContent(
+    owner: string,
+    repo: string,
+    files: CodeFile[]
+): Promise<CodeFile[]> {
+    const filesWithContent = await Promise.all(
+        files.map(async (file) => {
+            try {
+                // Skip if content is already cached
+                if (file.content !== undefined) {
+                    return file;
+                }
+                
+                const content = await fetchFileContent(owner, repo, file.path);
+                return { ...file, content };
+            } catch (error) {
+                logger.error(`Failed to fetch content for ${file.path}:`, error);
+                // Return file without content on error (will be skipped in review)
+                return file;
+            }
+        })
+    );
+    
+    return filesWithContent;
+}
