@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ sessionId: session.id });
+    // Return the checkout URL for direct redirect (Stripe API 2025-09-30+)
+    return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json(

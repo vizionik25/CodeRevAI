@@ -11,12 +11,6 @@ const getStripe = () => {
 
 export async function redirectToCheckout(priceId: string, plan: string) {
   try {
-    const stripe = await getStripe();
-    
-    if (!stripe) {
-      throw new Error('Stripe failed to load');
-    }
-
     // Call your API to create a checkout session
     const response = await fetch('/api/create-checkout-session', {
       method: 'POST',
@@ -34,16 +28,13 @@ export async function redirectToCheckout(priceId: string, plan: string) {
       throw new Error(error.error || 'Failed to create checkout session');
     }
 
-    const { sessionId } = await response.json();
+    const { url } = await response.json();
 
-    // Redirect to Stripe Checkout using the newer API
-    // @ts-ignore - redirectToCheckout exists but TypeScript types may be outdated
-    const result = await stripe.redirectToCheckout({
-      sessionId,
-    });
-
-    if (result?.error) {
-      throw result.error;
+    // Redirect to Stripe Checkout URL directly (modern approach for Stripe API 2025-09-30+)
+    if (url) {
+      window.location.href = url;
+    } else {
+      throw new Error('No checkout URL returned from server');
     }
   } catch (error: any) {
     console.error('Error redirecting to checkout:', error);
