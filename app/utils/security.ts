@@ -1,4 +1,5 @@
 // Security utilities for input validation and sanitization
+import { validateGitHubUrl as validateGitHubUrlUtil } from './githubUtils';
 
 // Global sanity limit for any text input (prompts, metadata, etc.)
 // This prevents DoS attacks from extremely large text inputs
@@ -185,30 +186,10 @@ export function validateFileSize(content: string, maxSize: number = 200000): { v
 
 /**
  * Validate repository URL
+ * Uses shared validation utility
  */
 export function validateRepoUrl(url: string): { valid: boolean; error?: string } {
-  if (!url || typeof url !== 'string') {
-    return { valid: false, error: 'Repository URL must be provided' };
-  }
-  
-  try {
-    const urlObj = new URL(url);
-    
-    // Only allow GitHub URLs
-    if (urlObj.hostname !== 'github.com') {
-      return { valid: false, error: 'Only GitHub repositories are supported' };
-    }
-    
-    // Check for valid path structure
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    if (pathParts.length < 2) {
-      return { valid: false, error: 'Invalid GitHub repository URL format' };
-    }
-    
-    return { valid: true };
-  } catch {
-    return { valid: false, error: 'Invalid URL format' };
-  }
+  return validateGitHubUrlUtil(url);
 }
 
 /**

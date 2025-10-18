@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CodeFile } from '@/app/types';
-import { fetchRepoFiles, fetchFileContent, parseGitHubUrl } from '../services/githubService';
+import { fetchRepoFiles, fetchFileContent } from '../services/githubService';
+import { parseGitHubUrl } from '@/app/utils/githubUtils';
 import { openDirectoryAndGetFiles, readFileContent, getFilesFromInput } from '../services/localFileService';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { LanguageOverrideSelector } from './LanguageOverrideSelector';

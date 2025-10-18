@@ -1,6 +1,7 @@
 import { LANGUAGES } from '@/app/data/constants';
 import { CodeFile, Language } from '@/app/types';
 import { logger } from '@/app/utils/logger';
+import { parseGitHubUrl, GITHUB_API_BASE } from '@/app/utils/githubUtils';
 
 // GitHub API types
 interface GitHubTreeFile {
@@ -12,26 +13,6 @@ interface GitHubTreeFile {
 interface GitHubContent {
   content: string;
   encoding: string;
-}
-
-const GITHUB_API_BASE = 'https://api.github.com';
-
-export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname !== 'github.com') {
-      return null;
-    }
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    if (pathParts.length < 2) {
-      return null;
-    }
-    const [owner, repo] = pathParts;
-    return { owner, repo };
-  } catch (error) {
-    logger.error("URL parsing error:", error);
-    return null;
-  }
 }
 
 function getLanguageForFile(filePath: string): Language | undefined {
