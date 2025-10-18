@@ -10,6 +10,46 @@
 
 A powerful AI-powered code review application built with Next.js, featuring user authentication via Clerk and AI analysis powered by Google Gemini.
 
+---
+
+## 📋 Sample Code Review Output
+
+**Want to see what CodeRevAI can do?** We've included a comprehensive code review of this very codebase! The review demonstrates CodeRevAI's ability to perform deep architectural analysis, identify security vulnerabilities, suggest production-ready improvements, and provide actionable recommendations with specific file paths and line numbers. Click below to view the complete holistic review.
+
+<details>
+<summary><b>🔍 Click to preview the review highlights</b></summary>
+
+<br>
+
+> **Holistic Code Review: CodeRevAI**
+> 
+> ### Overall Architectural Strengths
+> 
+> The CodeRevAI application demonstrates a solid foundation with several commendable architectural decisions:
+> 
+> 1. **Clear Separation of Concerns:** Well-organized with distinct directories for API routes, UI components, data, services, and utilities
+> 2. **Robust Authentication with Clerk:** Secure authentication layer protecting all sensitive API routes
+> 3. **Comprehensive Input Validation:** Centralized validation and sanitization logic protecting against common vulnerabilities
+> 4. **Stripe Webhook Security:** Proper signature verification for payment processing
+> 5. **AI Prompt Engineering:** Structured prompts with clear instructions for consistent, actionable feedback
+> 
+> ### Security & Production Readiness
+> 
+> The review identifies critical improvements including:
+> - Enhanced AI prompt injection protection
+> - Sensitive file filtering for local uploads
+> - Improved error handling consistency
+> - Retry mechanisms for API resilience
+> - Database integration recommendations
+> 
+> *...and much more detailed analysis with specific code examples and implementation suggestions.*
+
+</details>
+
+**[📄 View Full Review →](./REVIEW_SAMPLE.md)**
+
+---
+
 ## Features
 
 - 🤖 AI-powered code review using Google Gemini
