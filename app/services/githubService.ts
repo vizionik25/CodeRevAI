@@ -20,6 +20,39 @@ function getLanguageForFile(filePath: string): Language | undefined {
     return LANGUAGES.find(lang => lang.extensions.includes(extension));
 }
 
+/**
+ * Detect the default branch of a GitHub repository
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @returns Default branch name (e.g., 'main', 'master', 'develop')
+ */
+async function detectDefaultBranch(owner: string, repo: string): Promise<string> {
+    try {
+        const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}`);
+        
+        // Check for rate limiting
+        if (res.status === 403) {
+            const rateLimitRemaining = res.headers.get('X-RateLimit-Remaining');
+            const rateLimitReset = res.headers.get('X-RateLimit-Reset');
+            
+            if (rateLimitRemaining === '0' && rateLimitReset) {
+                const resetDate = new Date(parseInt(rateLimitReset) * 1000);
+                throw new Error(`GitHub API rate limit exceeded. Resets at ${resetDate.toLocaleTimeString()}`);
+            }
+        }
+        
+        if (!res.ok) {
+            throw new Error(`Could not fetch repository info. Status: ${res.status}`);
+        }
+        
+        const repoData = await res.json();
+        return repoData.default_branch || 'main'; // Fallback to 'main' if not specified
+    } catch (error) {
+        logger.warn('Failed to detect default branch, falling back to main/master:', error);
+        return 'main'; // Fallback to 'main' on error
+    }
+}
+
 async function fetchTree(owner: string, repo: string, branch: string) {
     const res = await fetch(`${GITHUB_API_BASE}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
     
@@ -41,16 +74,22 @@ async function fetchTree(owner: string, repo: string, branch: string) {
 }
 
 export async function fetchRepoFiles(owner: string, repo: string): Promise<CodeFile[]> {
+    // Detect the repository's default branch
+    const defaultBranch = await detectDefaultBranch(owner, repo);
+    logger.info(`Using branch '${defaultBranch}' for repository ${owner}/${repo}`);
+    
     let treeData;
     try {
-        treeData = await fetchTree(owner, repo, 'main');
+        treeData = await fetchTree(owner, repo, defaultBranch);
     } catch (error) {
-        logger.warn("Could not fetch 'main' branch, trying 'master'...");
+        // If the detected branch fails, try common alternatives
+        const fallbackBranch = defaultBranch === 'main' ? 'master' : 'main';
+        logger.warn(`Could not fetch '${defaultBranch}' branch, trying '${fallbackBranch}'...`);
         try {
-            treeData = await fetchTree(owner, repo, 'master');
+            treeData = await fetchTree(owner, repo, fallbackBranch);
         } catch (masterError) {
              logger.error('Error fetching repo tree:', masterError);
-             throw new Error('Failed to fetch repository files. Please check the URL, ensure the repository is public, and that it has a `main` or `master` branch.');
+             throw new Error(`Failed to fetch repository files. Please check the URL, ensure the repository is public, and that it has a '${defaultBranch}' or '${fallbackBranch}' branch.`);
         }
     }
 
