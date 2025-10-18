@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { redirectToCheckout } from './utils/stripeUtils';
+import { logger } from '@/app/utils/logger';
 
 export default function LandingPage() {
   const { isSignedIn } = useUser();
@@ -21,7 +22,7 @@ export default function LandingPage() {
     
     if (!priceId) {
       alert('Stripe is not configured yet. Please set up your Stripe Price IDs.');
-      console.error('Missing Stripe Price ID for plan:', plan);
+      logger.error('Missing Stripe Price ID for plan:', plan);
       return;
     }
     

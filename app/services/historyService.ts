@@ -1,4 +1,5 @@
 import { HistoryItem } from '@/app/types';
+import { logger } from '@/app/utils/logger';
 
 const HISTORY_KEY = 'codeReviewHistory';
 
@@ -20,7 +21,7 @@ export function getHistory(): HistoryItem[] {
       return history.sort((a, b) => b.timestamp - a.timestamp);
     }
   } catch (error) {
-    console.error("Failed to parse history from localStorage", error);
+    logger.error("Failed to parse history from localStorage", error);
     localStorage.removeItem(HISTORY_KEY);
   }
   return [];
@@ -33,7 +34,7 @@ export function addHistoryItem(item: HistoryItem): void {
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
   } catch (error) {
-    console.error("Failed to save history to localStorage", error);
+    logger.error("Failed to save history to localStorage", error);
   }
 }
 
@@ -41,6 +42,6 @@ export function clearHistory(): void {
     try {
         localStorage.removeItem(HISTORY_KEY);
     } catch (error) {
-        console.error("Failed to clear history from localStorage", error);
+        logger.error("Failed to clear history from localStorage", error);
     }
 }

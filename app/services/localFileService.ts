@@ -1,7 +1,6 @@
-import { LANGUAGES } from '@/app/data/constants';
+import { LANGUAGES, FILE_SIZE_LIMITS } from '@/app/data/constants';
 import { CodeFile, Language } from '@/app/types';
-
-import { FILE_SIZE_LIMITS } from '@/app/data/constants';
+import { logger } from '@/app/utils/logger';
 
 // Allowed file extensions (security measure)
 const ALLOWED_EXTENSIONS = [
@@ -60,7 +59,7 @@ export async function openDirectoryAndGetFiles(): Promise<{directoryHandle: File
              // User cancelled the picker. Return empty array, not an error.
              return { directoryHandle: null as any, files: [] };
         }
-        console.error('Error opening directory:', err);
+        logger.error('Error opening directory:', err);
         throw new Error('Failed to open directory. Please grant the necessary permissions.');
     }
 }
@@ -102,7 +101,7 @@ export async function getFilesFromInput(fileList: FileList): Promise<CodeFile[]>
                 content, // Content is read immediately
                 // No handle is available with this method
             })).catch(err => {
-                console.error(`Failed to read file ${path}`, err);
+                logger.error(`Failed to read file ${path}`, err);
                 return null; // Return null on failure to read a file
             });
             filePromises.push(promise);
@@ -128,7 +127,7 @@ export async function readFileContent(file: CodeFile): Promise<string> {
         
         return await fileObject.text();
     } catch (err) {
-        console.error('Error reading file content:', err);
+        logger.error('Error reading file content:', err);
         throw new Error(`Failed to read content of ${file.path}.`);
     }
 }
@@ -154,8 +153,8 @@ export async function saveFileWithBakExtension(
     const writable = await fileHandle.createWritable();
     await writable.write(newContent);
     await writable.close();
-  } catch(err) {
-      console.error("Error saving file:", err);
-      throw new Error("Could not save the file. Please ensure permissions are still granted.");
+  } catch (err) {
+    logger.error("Error saving file:", err);
+    throw new Error("Failed to save file. Please try again.");
   }
 }

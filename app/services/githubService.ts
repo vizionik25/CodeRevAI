@@ -1,5 +1,18 @@
 import { LANGUAGES } from '@/app/data/constants';
-import { CodeFile, GitHubTreeFile, GitHubContent, Language } from '@/app/types';
+import { CodeFile, Language } from '@/app/types';
+import { logger } from '@/app/utils/logger';
+
+// GitHub API types
+interface GitHubTreeFile {
+  path: string;
+  type: string;
+  sha: string;
+}
+
+interface GitHubContent {
+  content: string;
+  encoding: string;
+}
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -16,7 +29,7 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
     const [owner, repo] = pathParts;
     return { owner, repo };
   } catch (error) {
-    console.error("URL parsing error:", error);
+    logger.error("URL parsing error:", error);
     return null;
   }
 }
@@ -51,17 +64,17 @@ export async function fetchRepoFiles(owner: string, repo: string): Promise<CodeF
     try {
         treeData = await fetchTree(owner, repo, 'main');
     } catch (error) {
-        console.warn("Could not fetch 'main' branch, trying 'master'...");
+        logger.warn("Could not fetch 'main' branch, trying 'master'...");
         try {
             treeData = await fetchTree(owner, repo, 'master');
         } catch (masterError) {
-             console.error('Error fetching repo tree:', masterError);
+             logger.error('Error fetching repo tree:', masterError);
              throw new Error('Failed to fetch repository files. Please check the URL, ensure the repository is public, and that it has a `main` or `master` branch.');
         }
     }
 
     if (treeData.truncated) {
-        console.warn("Repository tree is too large and has been truncated by the GitHub API.");
+        logger.warn("Repository tree is too large and has been truncated by the GitHub API.");
     }
 
     const files: CodeFile[] = treeData.tree
@@ -99,7 +112,7 @@ export async function fetchFileContent(owner: string, repo: string, path: string
     try {
         return atob(contentData.content);
     } catch (e) {
-        console.error("Base64 decoding error:", e);
+        logger.error("Base64 decoding error:", e);
         throw new Error("Failed to decode file content.");
     }
 }

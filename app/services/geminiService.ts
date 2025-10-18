@@ -2,6 +2,7 @@
 // All AI calls are proxied through Next.js API routes to protect the API key
 
 import { cleanMarkdownFences } from '@/app/utils/markdown';
+import { logger } from '@/app/utils/logger';
 
 /**
  * Review a single code file
@@ -29,7 +30,7 @@ export async function reviewCode(code: string, language: string, customPrompt: s
     const data = await response.json();
     return data.feedback || '';
   } catch (error) {
-    console.error("Error calling review API:", error);
+    logger.error("Error calling review API:", error);
     if (error instanceof Error) {
         throw new Error(`Error during code review: ${error.message}`);
     }
@@ -63,7 +64,7 @@ export async function reviewRepository(files: { path: string, content: string }[
     const data = await response.json();
     return data.feedback || '';
   } catch (error) {
-    console.error("Error calling repository review API:", error);
+    logger.error("Error calling repository review API:", error);
     if (error instanceof Error) {
         throw new Error(`Error during repository review: ${error.message}`);
     }
@@ -101,7 +102,7 @@ export async function generateFullCodeFromReview(originalCode: string, language:
 
     return newCode.trim();
   } catch (error) {
-    console.error("Error calling generate diff API:", error);
+    logger.error("Error calling generate diff API:", error);
     if (error instanceof Error) {
         throw new Error(`Error generating refactored code: ${error.message}`);
     }

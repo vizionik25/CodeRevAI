@@ -9,6 +9,7 @@ import { reviewCode, reviewRepository } from '../services/geminiService';
 import { getHistory, addHistoryItem, clearHistory } from '../services/historyService';
 import { LANGUAGES } from '@/app/data/constants';
 import { CodeFile, HistoryItem } from '@/app/types';
+import { logger } from '@/app/utils/logger';
 
 export default function HomePage() {
   const [feedback, setFeedback] = useState('');
@@ -73,7 +74,7 @@ export default function HomePage() {
       } else {
         setErrorContext('review');
       }
-      console.error(e);
+      logger.error(e);
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +118,7 @@ export default function HomePage() {
       } else {
         setErrorContext('review');
       }
-      console.error(e);
+      logger.error(e);
     } finally {
       setIsLoading(false);
     }
