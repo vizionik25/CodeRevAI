@@ -102,7 +102,6 @@ Make sure to set the environment variables in your deployment platform's setting
 - 📖 [Deployment Guide](./DEPLOYMENT.md) - Complete Google Cloud Run deployment guide
 - 🚀 [Quick Start](./QUICKSTART.md) - Deploy in 3 steps
 - 💳 [Stripe Integration](./docs/STRIPE_INTEGRATION.md) - Payment integration guide
-- 🔐 [Security](./SECURITY.md) - Security best practices and guidelines
 
 ## Security
 
@@ -113,15 +112,6 @@ Make sure to set the environment variables in your deployment platform's setting
 ./scripts/check-security.sh
 ```
 
-### Protected Files (gitignored)
-- ✅ `.env.local` - All API keys and secrets
-- ✅ `*.key`, `*.pem` - Private keys and certificates
-- ✅ Service account credentials
-
-### Safe to Commit
-- ✅ `.env.example` - Template without real secrets
-
-See [SECURITY.md](./SECURITY.md) for complete guidelines.
 
 ## Tech Stack
 
