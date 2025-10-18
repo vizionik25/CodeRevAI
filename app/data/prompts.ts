@@ -38,9 +38,9 @@ export const PROMPT_INSTRUCTIONS: Record<string, string> = {
     For each performance issue:
     1. Describe the performance problem and its impact
     2. Show the inefficient code: \`\`\`{language}
-    3. Explain why it's inefficient (e.g., O(n²) complexity, unnecessary allocations)
+    3. Explain why it's inefficient (e.g., O(n\u00B2) complexity, unnecessary allocations)
     4. Provide optimized alternative: \`\`\`{language}
-    5. Explain the performance improvement (e.g., "Reduces complexity from O(n²) to O(n)")
+    5. Explain the performance improvement (e.g., "Reduces complexity from O(n\u00B2) to O(n)")
     
     Include benchmarks or complexity analysis when relevant.
     Format your feedback clearly using Markdown with proper code blocks.

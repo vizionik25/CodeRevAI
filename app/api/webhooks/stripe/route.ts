@@ -94,10 +94,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing webhook:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while processing webhook';
     return NextResponse.json(
-      { error: 'Webhook processing failed' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -4,11 +4,43 @@
 import { logger } from '@/app/utils/logger';
 
 /**
+ * Retry a fetch request with exponential backoff
+ * Useful for handling transient network issues or temporary service unavailability
+ */
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  retries: number = 3, 
+  delay: number = 1000
+): Promise<Response> {
+  try {
+    const response = await fetch(url, options);
+    
+    // Retry on server errors (5xx) if retries remaining
+    if (!response.ok && response.status >= 500 && retries > 0) {
+      logger.warn(`Retrying ${url} due to ${response.status} status. Retries left: ${retries}`);
+      await new Promise(res => setTimeout(res, delay));
+      return fetchWithRetry(url, options, retries - 1, delay * 2);
+    }
+    
+    return response;
+  } catch (error) {
+    // Retry on network errors if retries remaining
+    if (retries > 0) {
+      logger.warn(`Retrying ${url} due to network error. Retries left: ${retries}`, error);
+      await new Promise(res => setTimeout(res, delay));
+      return fetchWithRetry(url, options, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+}
+
+/**
  * Review a single code file
  */
 export async function reviewCode(code: string, language: string, customPrompt: string, modes: string[]): Promise<string> {
   try {
-    const response = await fetch('/api/review-code', {
+    const response = await fetchWithRetry('/api/review-code', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,7 +74,7 @@ export async function reviewCode(code: string, language: string, customPrompt: s
  */
 export async function reviewRepository(files: { path: string, content: string }[], repoUrl: string, customPrompt: string, modes: string[]): Promise<string> {
   try {
-    const response = await fetch('/api/review-repo', {
+    const response = await fetchWithRetry('/api/review-repo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +108,7 @@ export async function reviewRepository(files: { path: string, content: string }[
  */
 export async function generateFullCodeFromReview(originalCode: string, language: string, feedback: string): Promise<string> {
   try {
-    const response = await fetch('/api/generate-diff', {
+    const response = await fetchWithRetry('/api/generate-diff', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

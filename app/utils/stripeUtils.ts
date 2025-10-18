@@ -5,6 +5,8 @@
  * @see https://docs.stripe.com/changelog/clover/2025-09-30/remove-redirect-to-checkout
  */
 
+import { logger } from './logger';
+
 export async function redirectToCheckout(priceId: string, plan: string) {
   try {
     // Call your API to create a checkout session
@@ -33,8 +35,9 @@ export async function redirectToCheckout(priceId: string, plan: string) {
     } else {
       throw new Error('No checkout URL returned from server');
     }
-  } catch (error: any) {
-    console.error('Error redirecting to checkout:', error);
-    alert(error.message || 'Failed to start checkout. Please try again.');
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to start checkout. Please try again.';
+    logger.error('Error redirecting to checkout:', error);
+    alert(errorMessage);
   }
 }

@@ -110,7 +110,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
         {/* Helpful tip */}
         {showProgress && type === 'review' && currentStep >= 2 && (
           <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg text-xs text-gray-400">
-            <span className="text-indigo-400 font-semibold">💡 Tip:</span> Large files or complex
+            <span className="text-indigo-400 font-semibold">\uD83D\uDCA1 Tip:</span> Large files or complex
             code may take longer to analyze. The AI is carefully reviewing every aspect of your code.
           </div>
         )}

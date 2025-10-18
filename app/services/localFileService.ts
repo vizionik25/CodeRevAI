@@ -1,6 +1,7 @@
 import { LANGUAGES, FILE_SIZE_LIMITS } from '@/app/data/constants';
 import { CodeFile, Language } from '@/app/types';
 import { logger } from '@/app/utils/logger';
+import { filterSensitiveFiles } from '@/app/utils/security';
 
 // Allowed file extensions (security measure)
 const ALLOWED_EXTENSIONS = [
@@ -53,7 +54,13 @@ export async function openDirectoryAndGetFiles(): Promise<{directoryHandle: File
     try {
         const directoryHandle = await window.showDirectoryPicker();
         const files = await scanFiles(directoryHandle);
-        return { directoryHandle, files };
+        
+        // Filter out sensitive files (.env, API keys, etc.)
+        const filesWithPaths = files.map(f => ({ path: f.path }));
+        const safeFilesPaths = filterSensitiveFiles(filesWithPaths);
+        const safeFiles = files.filter(f => safeFilesPaths.some(sf => sf.path === f.path));
+        
+        return { directoryHandle, files: safeFiles };
     } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
              // User cancelled the picker. Return empty array, not an error.
@@ -109,7 +116,14 @@ export async function getFilesFromInput(fileList: FileList): Promise<CodeFile[]>
     }
 
     const resolvedFiles = await Promise.all(filePromises);
-    return resolvedFiles.filter((file): file is CodeFile => file !== null);
+    const validFiles = resolvedFiles.filter((file): file is CodeFile => file !== null);
+    
+    // Filter out sensitive files (.env, API keys, etc.)
+    const validFilesWithPaths = validFiles.map(f => ({ path: f.path }));
+    const safeValidFilesPaths = filterSensitiveFiles(validFilesWithPaths);
+    const safeValidFiles = validFiles.filter(f => safeValidFilesPaths.some(sf => sf.path === f.path));
+    
+    return safeValidFiles;
 }
 
 

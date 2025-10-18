@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
     <header className="bg-gray-800 shadow-md">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
@@ -43,7 +43,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
           <SignedIn>
             {isPro ? (
               <Link href="/billing">
-                <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors">
+                <button 
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
+                  aria-label="Manage billing and subscription"
+                >
                   Billing
                 </button>
               </Link>
@@ -51,6 +54,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
               <button 
                 onClick={handleUpgradeClick}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white font-semibold transition-colors"
+                aria-label="Upgrade to Pro plan"
               >
                 Upgrade
               </button>

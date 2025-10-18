@@ -43,7 +43,7 @@ export const REVIEW_MODE_GROUPS: ReviewModeGroup[] = [
         { 
           value: 'performance', 
           label: 'Performance Optimization', 
-          description: 'Find bottlenecks, inefficient algorithms, memory leaks, and O(n²) complexity. Includes specific optimization suggestions.' 
+          description: 'Find bottlenecks, inefficient algorithms, memory leaks, and O(n\u00B2) complexity. Includes specific optimization suggestions.' 
         },
         { 
           value: 'best_practices', 

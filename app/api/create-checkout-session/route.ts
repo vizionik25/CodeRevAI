@@ -50,10 +50,11 @@ export async function POST(req: NextRequest) {
 
     // Return the checkout URL for direct redirect (Stripe API 2025-09-30+)
     return NextResponse.json({ url: session.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating checkout session:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while creating checkout session';
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

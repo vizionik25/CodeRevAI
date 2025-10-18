@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import {
   sanitizeInput,
+  sanitizeForAIPrompt,
   validateCustomPrompt,
   validateReviewModes,
   validateRepoUrl,
@@ -154,7 +155,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const sanitizedPrompt = customPrompt ? sanitizeInput(customPrompt) : '';
+    const sanitizedPrompt = customPrompt ? sanitizeForAIPrompt(customPrompt) : '';
     const sanitizedRepoUrl = sanitizeInput(repoUrl);
 
     // Build prompt
@@ -185,10 +186,11 @@ export async function POST(req: Request) {
         }
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in repository review API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while reviewing repository';
     return NextResponse.json(
-      { error: error.message || 'Failed to review repository' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

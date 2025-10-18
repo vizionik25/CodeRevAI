@@ -12,19 +12,51 @@ const MAX_CODE_LENGTH = 100000; // 100KB
 /**
  * Sanitize user input to prevent injection attacks
  * Removes potentially dangerous characters and patterns
+ * Escapes markdown characters to prevent AI prompt manipulation
  */
 export function sanitizeInput(input: string): string {
   if (!input) return '';
   
-  // Remove null bytes
-  let sanitized = input.replace(/\0/g, '');
+  let sanitized = input;
   
-  // Limit length to prevent DOS
+  // Remove null bytes
+  sanitized = sanitized.replace(/\0/g, '');
+  
+  // Trim whitespace
+  sanitized = sanitized.trim();
+  
+  // Limit length to prevent DOS (before escaping to preserve original size intent)
   if (sanitized.length > GLOBAL_INPUT_SANITY_LIMIT) {
     sanitized = sanitized.substring(0, GLOBAL_INPUT_SANITY_LIMIT);
   }
   
-  return sanitized.trim();
+  return sanitized;
+}
+
+/**
+ * Sanitize input specifically for AI prompts
+ * Escapes markdown characters that could be interpreted as new instructions by the AI
+ * Use this for user-provided prompts, feedback, and custom instructions
+ */
+export function sanitizeForAIPrompt(input: string): string {
+  if (!input) return '';
+  
+  let sanitized = sanitizeInput(input);
+  
+  // Escape markdown characters that could be misinterpreted as AI instructions
+  sanitized = sanitized
+    .replace(/`/g, '\\`')      // Escape backticks (code blocks)
+    .replace(/\*/g, '\\*')     // Escape asterisks (bold/italic)
+    .replace(/_/g, '\\_')      // Escape underscores (italic)
+    .replace(/#/g, '\\#')      // Escape hashtags (headings)
+    .replace(/\[/g, '\\[')     // Escape brackets (links)
+    .replace(/\]/g, '\\]')
+    .replace(/\(/g, '\\(')     // Escape parentheses (links)
+    .replace(/\)/g, '\\)')
+    .replace(/</g, '&lt;')     // Basic HTML escaping
+    .replace(/>/g, '&gt;');
+  
+  return sanitized;
 }
 
 /**

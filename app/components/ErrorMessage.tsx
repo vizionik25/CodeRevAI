@@ -13,7 +13,7 @@ interface ErrorSolution {
 
 const ERROR_SOLUTIONS: Record<string, ErrorSolution> = {
   'rate-limit': {
-    icon: '⏱️',
+    icon: '\u23F1\uFE0F',
     title: 'Rate Limit Reached',
     solutions: [
       'Wait a few minutes before trying again',
@@ -22,7 +22,7 @@ const ERROR_SOLUTIONS: Record<string, ErrorSolution> = {
     ],
   },
   'network': {
-    icon: '🌐',
+    icon: '\uD83C\uDF10',
     title: 'Connection Error',
     solutions: [
       'Check your internet connection',
@@ -31,7 +31,7 @@ const ERROR_SOLUTIONS: Record<string, ErrorSolution> = {
     ],
   },
   'auth': {
-    icon: '🔐',
+    icon: '\uD83D\uDD10',
     title: 'Authentication Required',
     solutions: [
       'Sign in to your account',
@@ -40,7 +40,7 @@ const ERROR_SOLUTIONS: Record<string, ErrorSolution> = {
     ],
   },
   'file': {
-    icon: '📄',
+    icon: '\uD83D\uDCC4',
     title: 'File Processing Error',
     solutions: [
       'Ensure the file is a valid code file',
@@ -49,7 +49,7 @@ const ERROR_SOLUTIONS: Record<string, ErrorSolution> = {
     ],
   },
   'review': {
-    icon: '🤖',
+    icon: '\uD83E\uDD16',
     title: 'AI Review Failed',
     solutions: [
       'The code may be too complex or too long',
@@ -98,7 +98,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, context }) =>
 
         {/* Solutions */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-300">💡 What you can try:</h4>
+          <h4 className="text-sm font-medium text-gray-300">\uD83D\uDCA1 What you can try:</h4>
           <ul className="space-y-2">
             {solution.solutions.map((sol, index) => (
               <li key={index} className="flex items-start gap-2 text-sm text-gray-400">

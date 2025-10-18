@@ -123,10 +123,11 @@ Return the complete, refactored code now.
         }
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in generate diff API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while generating modified code';
     return NextResponse.json(
-      { error: error.message || 'Failed to generate modified code' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

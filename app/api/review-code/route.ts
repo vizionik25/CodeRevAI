@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import {
   sanitizeInput,
+  sanitizeForAIPrompt,
   validateCodeInput,
   validateCustomPrompt,
   validateLanguage,
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
     // Sanitize inputs
     const sanitizedCode = sanitizeInput(code);
     const sanitizedLanguage = sanitizeInput(language);
-    const sanitizedPrompt = customPrompt ? sanitizeInput(customPrompt) : '';
+    const sanitizedPrompt = customPrompt ? sanitizeForAIPrompt(customPrompt) : '';
 
     // Build prompt with sanitized inputs
     const prompt = buildPrompt(
@@ -142,10 +143,11 @@ export async function POST(req: Request) {
         }
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in code review API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while reviewing code';
     return NextResponse.json(
-      { error: error.message || 'Failed to review code' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
