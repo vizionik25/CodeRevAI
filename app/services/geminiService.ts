@@ -1,7 +1,6 @@
 // Gemini Service - Client-side wrapper for secure API calls
 // All AI calls are proxied through Next.js API routes to protect the API key
 
-import { cleanMarkdownFences } from '@/app/utils/markdown';
 import { logger } from '@/app/utils/logger';
 
 /**
@@ -95,10 +94,7 @@ export async function generateFullCodeFromReview(originalCode: string, language:
     }
 
     const data = await response.json();
-    let newCode = data.modifiedCode || '';
-
-    // Clean up potential markdown fences using utility function
-    newCode = cleanMarkdownFences(newCode, language);
+    const newCode = data.modifiedCode || '';
 
     return newCode.trim();
   } catch (error) {
