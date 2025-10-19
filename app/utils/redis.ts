@@ -1,13 +1,23 @@
 import { Redis } from '@upstash/redis';
 
-if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-  throw new Error('Redis configuration missing. Please set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.');
+// Lazy initialization to avoid build-time errors
+let redisInstance: Redis | null = null;
+
+function getRedis(): Redis {
+  if (!redisInstance) {
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      throw new Error('Redis configuration missing. Please set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.');
+    }
+    
+    redisInstance = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+  return redisInstance;
 }
 
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+export const redis = getRedis();
 
 /**
  * Distributed rate limiting using Redis
@@ -24,7 +34,8 @@ export async function checkRateLimitRedis(
 
   try {
     // Use Redis sorted set to track requests within time window
-    const pipeline = redis.pipeline();
+    const redisClient = getRedis();
+    const pipeline = redisClient.pipeline();
     
     // Remove old entries outside the time window
     pipeline.zremrangebyscore(key, 0, windowStart);
