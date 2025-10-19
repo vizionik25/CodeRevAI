@@ -17,9 +17,25 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch user's subscription from your database
-    // For now, we'll just show a placeholder
-    setLoading(false);
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch('/api/subscription');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchSubscription();
+    } else {
+      setLoading(false);
+    }
   }, [user]);
 
   if (!isSignedIn) {

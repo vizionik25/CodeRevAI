@@ -4,8 +4,8 @@ import {
   sanitizeInput,
   validateCodeInput,
   validateLanguage,
-  checkRateLimit,
 } from '@/app/utils/security';
+import { checkRateLimitRedis } from '@/app/utils/redis';
 import { cleanMarkdownFences } from '@/app/utils/markdown';
 import { getGeminiAI } from '@/app/utils/apiClients';
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     // Rate limiting - 15 requests per minute per user
-    const rateLimit = checkRateLimit(`generate-diff:${userId}`, 15, 60000);
+    const rateLimit = await checkRateLimitRedis(`generate-diff:${userId}`, 15, 60000);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Please try again later.' },

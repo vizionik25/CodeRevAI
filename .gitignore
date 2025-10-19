@@ -176,3 +176,5 @@ id_ed25519.pub
 PERSONAL_NOTES.md
 DRAFT*.md
 WIP*.md
+
+/app/generated/prisma

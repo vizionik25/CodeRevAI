@@ -18,8 +18,12 @@
   "dependencies": {
     "@clerk/nextjs": "^6.33.4",
     "@google/genai": "^1.21.0",
+    "@prisma/client": "^6.17.1",
     "@stripe/stripe-js": "^8.0.0",
+    "@upstash/redis": "^1.35.6",
+    "dotenv": "^17.2.3",
     "next": "^15.5.5",
+    "prisma": "^6.17.1",
     "react": "^18.3.1",
     "react-diff-viewer": "^3.1.1",
     "react-dom": "^18.3.1",

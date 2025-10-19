@@ -27,7 +27,12 @@ export default function HomePage() {
 
 
   useEffect(() => {
-    setHistory(getHistory());
+    // Load history from database on mount
+    const loadHistory = async () => {
+      const historyData = await getHistory();
+      setHistory(historyData);
+    };
+    loadHistory();
   }, []);
 
   const handleReview = useCallback(async (codeToReview: string, language: string, prompt: string) => {
@@ -58,8 +63,9 @@ export default function HomePage() {
         mode: reviewMode,
         reviewType: 'file',
       };
-      addHistoryItem(historyItem);
-      setHistory(getHistory());
+      await addHistoryItem(historyItem);
+      const updatedHistory = await getHistory();
+      setHistory(updatedHistory);
 
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -102,8 +108,9 @@ export default function HomePage() {
         mode: reviewMode,
         reviewType: 'repo',
       };
-      addHistoryItem(historyItem);
-      setHistory(getHistory());
+      await addHistoryItem(historyItem);
+      const updatedHistory = await getHistory();
+      setHistory(updatedHistory);
       
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -145,8 +152,8 @@ export default function HomePage() {
     setIsHistoryPanelOpen(false);
   };
 
-  const handleClearHistory = () => {
-    clearHistory();
+  const handleClearHistory = async () => {
+    await clearHistory();
     setHistory([]);
   }
 

@@ -7,8 +7,8 @@ import {
   validateCustomPrompt,
   validateLanguage,
   validateReviewModes,
-  checkRateLimit,
 } from '@/app/utils/security';
+import { checkRateLimitRedis } from '@/app/utils/redis';
 import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
 import { getGeminiAI } from '@/app/utils/apiClients';
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     }
 
     // Rate limiting - 20 requests per minute per user
-    const rateLimit = checkRateLimit(`review-code:${userId}`, 20, 60000);
+    const rateLimit = await checkRateLimitRedis(`review-code:${userId}`, 20, 60000);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Please try again later.' },

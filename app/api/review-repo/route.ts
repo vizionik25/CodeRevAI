@@ -8,8 +8,8 @@ import {
   validateRepoUrl,
   validateFileSize,
   filterSensitiveFiles,
-  checkRateLimit,
 } from '@/app/utils/security';
+import { checkRateLimitRedis } from '@/app/utils/redis';
 import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
 import { getGeminiAI } from '@/app/utils/apiClients';
 import { FILE_SIZE_LIMITS } from '@/app/data/constants';
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     }
 
     // Rate limiting - 5 requests per minute for repo reviews (more intensive)
-    const rateLimit = checkRateLimit(`review-repo:${userId}`, 5, 60000);
+    const rateLimit = await checkRateLimitRedis(`review-repo:${userId}`, 5, 60000);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Repository reviews are limited to 5 per minute.' },

@@ -1,47 +1,60 @@
 import { HistoryItem } from '@/app/types';
-import { logger } from '@/app/utils/logger';
 
-const HISTORY_KEY = 'codeReviewHistory';
+/**
+ * Client-side history service
+ * These functions call the API routes which handle database operations
+ */
 
-export function getHistory(): HistoryItem[] {
+/**
+ * Get review history for the current user from database
+ */
+export async function getHistory(): Promise<HistoryItem[]> {
   try {
-    const historyJson = localStorage.getItem(HISTORY_KEY);
-    if (historyJson) {
-      const parsedHistory = JSON.parse(historyJson) as any[];
-      const history = parsedHistory.map(item => {
-        // Backwards compatibility for old history items
-        const mode = typeof item.mode === 'string' ? [item.mode] : item.mode || ['comprehensive'];
-        return {
-          ...item,
-          mode: mode,
-          reviewType: item.reviewType || 'file'
-        };
-      });
-      // Sort by timestamp descending (newest first)
-      return history.sort((a, b) => b.timestamp - a.timestamp);
+    const response = await fetch('/api/history');
+    if (!response.ok) {
+      throw new Error('Failed to fetch history');
     }
+    const data = await response.json();
+    return data.history || [];
   } catch (error) {
-    logger.error("Failed to parse history from localStorage", error);
-    localStorage.removeItem(HISTORY_KEY);
-  }
-  return [];
-}
-
-export function addHistoryItem(item: HistoryItem): void {
-  const history = getHistory();
-  // Prevent duplicates and limit history size
-  const newHistory = [item, ...history.filter(h => h.id !== item.id)].slice(0, 50);
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
-  } catch (error) {
-    logger.error("Failed to save history to localStorage", error);
+    console.error('Error fetching history:', error);
+    return [];
   }
 }
 
-export function clearHistory(): void {
-    try {
-        localStorage.removeItem(HISTORY_KEY);
-    } catch (error) {
-        logger.error("Failed to clear history from localStorage", error);
+/**
+ * Add a new review to history
+ */
+export async function addHistoryItem(item: HistoryItem): Promise<void> {
+  try {
+    const response = await fetch('/api/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to add history item');
     }
+  } catch (error) {
+    console.error('Error adding history item:', error);
+  }
 }
+
+/**
+ * Clear all history for the current user
+ */
+export async function clearHistory(): Promise<void> {
+  try {
+    const response = await fetch('/api/history', {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to clear history');
+    }
+  } catch (error) {
+    console.error('Error clearing history:', error);
+  }
+}
+

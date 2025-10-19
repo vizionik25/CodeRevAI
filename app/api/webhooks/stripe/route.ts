@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getStripe } from '@/app/utils/apiClients';
+import { prisma } from '@/app/lib/prisma';
+import { clerkClient } from '@clerk/nextjs/server';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
@@ -34,11 +36,41 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+        const plan = session.metadata?.plan;
+
         console.log('Checkout session completed:', session.id);
-        
-        // TODO: Store subscription info in your database
-        // You can access userId from session.metadata.userId
-        // and plan from session.metadata.plan
+
+        if (userId && plan && session.customer && session.subscription) {
+          // Store subscription in database
+          await prisma.userSubscription.upsert({
+            where: { userId },
+            update: {
+              stripeCustomerId: session.customer as string,
+              stripeSubscriptionId: session.subscription as string,
+              stripePriceId: session.metadata?.priceId || null,
+              plan: plan,
+              status: 'active',
+              updatedAt: new Date(),
+            },
+            create: {
+              userId,
+              stripeCustomerId: session.customer as string,
+              stripeSubscriptionId: session.subscription as string,
+              stripePriceId: session.metadata?.priceId || null,
+              plan: plan,
+              status: 'active',
+            },
+          });
+
+          // Update Clerk user metadata
+          const clerk = await clerkClient();
+          await clerk.users.updateUserMetadata(userId, {
+            publicMetadata: { plan: plan },
+          });
+
+          console.log(`Subscription created for user ${userId}`);
+        }
         
         break;
       }
@@ -54,10 +86,35 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
+        const subData = subscription as any; // Stripe SDK types are incomplete
         console.log('Subscription updated:', subscription.id);
         
-        // TODO: Update subscription status in your database
-        // Handle subscription changes (upgrade/downgrade)
+        // Find user by Stripe customer ID
+        const userSub = await prisma.userSubscription.findUnique({
+          where: { stripeCustomerId: subscription.customer as string },
+        });
+
+        if (userSub) {
+          await prisma.userSubscription.update({
+            where: { id: userSub.id },
+            data: {
+              status: subscription.status,
+              currentPeriodStart: subData.current_period_start ? new Date(subData.current_period_start * 1000) : null,
+              currentPeriodEnd: subData.current_period_end ? new Date(subData.current_period_end * 1000) : null,
+              cancelAtPeriodEnd: subData.cancel_at_period_end || false,
+              updatedAt: new Date(),
+            },
+          });
+
+          // Update plan if status changed
+          const newPlan = subscription.status === 'active' ? 'pro' : 'free';
+          const clerk = await clerkClient();
+          await clerk.users.updateUserMetadata(userSub.userId, {
+            publicMetadata: { plan: newPlan },
+          });
+
+          console.log(`Subscription updated for customer ${subscription.customer}`);
+        }
         
         break;
       }
@@ -66,7 +123,27 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
         console.log('Subscription canceled:', subscription.id);
         
-        // TODO: Mark subscription as canceled in your database
+        const userSub = await prisma.userSubscription.findUnique({
+          where: { stripeCustomerId: subscription.customer as string },
+        });
+
+        if (userSub) {
+          await prisma.userSubscription.update({
+            where: { id: userSub.id },
+            data: {
+              status: 'canceled',
+              plan: 'free',
+              updatedAt: new Date(),
+            },
+          });
+
+          const clerk = await clerkClient();
+          await clerk.users.updateUserMetadata(userSub.userId, {
+            publicMetadata: { plan: 'free' },
+          });
+
+          console.log(`Subscription canceled for customer ${subscription.customer}`);
+        }
         
         break;
       }

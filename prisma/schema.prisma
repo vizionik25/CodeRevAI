@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User subscription model
+model UserSubscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique // Clerk user ID
+  stripeCustomerId  String   @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId     String?
+  plan              String   // 'free' or 'pro'
+  status            String   // 'active', 'canceled', 'past_due', 'incomplete', etc.
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}
+
+// Review history model
+model ReviewHistory {
+  id              String   @id @default(cuid())
+  userId          String   // Clerk user ID
+  type            String   // 'code', 'repository', 'file'
+  language        String?
+  reviewModes     String[] // Array of review mode strings
+  timestamp       DateTime @default(now())
+  codeSnippet     String?  @db.Text // First 500 chars of code
+  feedback        String   @db.Text // AI feedback
+  repoUrl         String?
+  fileName        String?
+  
+  @@index([userId, timestamp])
+  @@index([userId])
+}
+
+// Feedback model (for review quality tracking)
+model ReviewFeedback {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk user ID
+  reviewId    String?  // Optional link to ReviewHistory
+  rating      Int      // 1-5 or thumbs up (1) / thumbs down (0)
+  comment     String?  @db.Text
+  reviewType  String   // 'code', 'repository'
+  timestamp   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([reviewId])
+}
+
+// API usage tracking (optional - for analytics)
+model ApiUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  endpoint    String   // '/api/review-code', '/api/review-repo', etc.
+  timestamp   DateTime @default(now())
+  duration    Int?     // Response time in ms
+  statusCode  Int?     // HTTP status code
+  tokensUsed  Int?     // AI tokens consumed (if tracked)
+  
+  @@index([userId, timestamp])
+  @@index([endpoint, timestamp])
+}

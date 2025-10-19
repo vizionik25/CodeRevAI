@@ -225,45 +225,8 @@ export function validateRepoUrl(url: string): { valid: boolean; error?: string }
 }
 
 /**
- * Rate limiting helper - simple in-memory store
- * For production, use Redis or a proper rate limiting service
+ * Rate limiting helper
+ * NOTE: In-memory rate limiting has been replaced with Redis-based distributed rate limiting.
+ * See app/utils/redis.ts for the new implementation using checkRateLimitRedis().
+ * This ensures rate limits work correctly across multiple instances/containers in production.
  */
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-
-export function checkRateLimit(
-  identifier: string,
-  limit: number = 10,
-  windowMs: number = 60000 // 1 minute
-): { allowed: boolean; remaining: number; resetTime: number } {
-  const now = Date.now();
-  const record = rateLimitStore.get(identifier);
-  
-  if (!record || now > record.resetTime) {
-    // New window
-    const resetTime = now + windowMs;
-    rateLimitStore.set(identifier, { count: 1, resetTime });
-    return { allowed: true, remaining: limit - 1, resetTime };
-  }
-  
-  if (record.count >= limit) {
-    // Rate limit exceeded
-    return { allowed: false, remaining: 0, resetTime: record.resetTime };
-  }
-  
-  // Increment count
-  record.count++;
-  rateLimitStore.set(identifier, record);
-  return { allowed: true, remaining: limit - record.count, resetTime: record.resetTime };
-}
-
-// Clean up old rate limit records periodically
-if (typeof window === 'undefined') { // Only run on server
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, value] of rateLimitStore.entries()) {
-      if (now > value.resetTime) {
-        rateLimitStore.delete(key);
-      }
-    }
-  }, 60000); // Clean up every minute
-}
