@@ -4,6 +4,12 @@ import { Redis } from '@upstash/redis';
 let redisInstance: Redis | null = null;
 
 function getRedis(): Redis {
+  // Skip initialization during build time
+  if (typeof window === 'undefined' && !process.env.UPSTASH_REDIS_REST_URL) {
+    // Return a dummy instance during build - it will never be called
+    return {} as Redis;
+  }
+  
   if (!redisInstance) {
     if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
       throw new Error('Redis configuration missing. Please set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.');
