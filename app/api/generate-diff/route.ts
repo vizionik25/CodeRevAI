@@ -8,6 +8,8 @@ import {
 import { checkRateLimitRedis } from '@/app/utils/redis';
 import { cleanMarkdownFences } from '@/app/utils/markdown';
 import { getGeminiAI } from '@/app/utils/apiClients';
+import { logger } from '@/app/utils/logger';
+import { AppError, createErrorResponse } from '@/app/types/errors';
 
 export async function POST(req: Request) {
   try {
@@ -15,8 +17,9 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     
     if (!userId) {
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        createErrorResponse(error),
         { status: 401 }
       );
     }
@@ -24,8 +27,14 @@ export async function POST(req: Request) {
     // Rate limiting - 15 requests per minute per user
     const rateLimit = await checkRateLimitRedis(`generate-diff:${userId}`, 15, 60000);
     if (!rateLimit.allowed) {
+      const error = new AppError(
+        'RATE_LIMIT_EXCEEDED',
+        'Rate limit exceeded. Please try again later.',
+        undefined,
+        true
+      );
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
+        createErrorResponse(error),
         { 
           status: 429,
           headers: {
@@ -43,23 +52,26 @@ export async function POST(req: Request) {
     // Validate inputs
     const codeValidation = validateCodeInput(originalCode);
     if (!codeValidation.valid) {
+      const error = new AppError('INVALID_INPUT', codeValidation.error || 'Invalid code input');
       return NextResponse.json(
-        { error: codeValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const languageValidation = validateLanguage(language);
     if (!languageValidation.valid) {
+      const error = new AppError('INVALID_INPUT', languageValidation.error || 'Invalid language');
       return NextResponse.json(
-        { error: languageValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     if (!feedback || typeof feedback !== 'string') {
+      const error = new AppError('INVALID_INPUT', 'Feedback is required');
       return NextResponse.json(
-        { error: 'Feedback is required' },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
@@ -124,11 +136,14 @@ Return the complete, refactored code now.
       }
     );
   } catch (error: unknown) {
-    console.error('Error in generate diff API:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while generating modified code';
+    logger.error('Error in generate diff API:', error);
+    
+    const apiError = createErrorResponse(error, 'AI_SERVICE_ERROR');
+    const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
+    
     return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
+      apiError,
+      { status: statusCode }
     );
   }
 }

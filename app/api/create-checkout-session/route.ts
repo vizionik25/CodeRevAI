@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getStripe } from '@/app/utils/apiClients';
+import { logger } from '@/app/utils/logger';
+import { AppError, createErrorResponse } from '@/app/types/errors';
 
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
     
     if (!userId) {
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        createErrorResponse(error),
         { status: 401 }
       );
     }
@@ -16,8 +19,9 @@ export async function POST(req: NextRequest) {
     const { priceId, plan } = await req.json();
 
     if (!priceId) {
+      const error = new AppError('INVALID_INPUT', 'Price ID is required');
       return NextResponse.json(
-        { error: 'Price ID is required' },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
@@ -51,10 +55,11 @@ export async function POST(req: NextRequest) {
     // Return the checkout URL for direct redirect (Stripe API 2025-09-30+)
     return NextResponse.json({ url: session.url });
   } catch (error: unknown) {
-    console.error('Error creating checkout session:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while creating checkout session';
+    logger.error('Error creating checkout session:', error);
+    
+    const apiError = createErrorResponse(error, 'PAYMENT_ERROR');
     return NextResponse.json(
-      { error: errorMessage },
+      apiError,
       { status: 500 }
     );
   }

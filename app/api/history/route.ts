@@ -1,21 +1,24 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getHistoryFromDB, addHistoryItemToDB, clearHistoryFromDB } from '@/app/services/historyServiceDB';
+import { logger } from '@/app/utils/logger';
+import { AppError, createErrorResponse } from '@/app/types/errors';
 
 export async function GET(req: Request) {
   try {
     const { userId } = await auth();
     
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      return NextResponse.json(createErrorResponse(error), { status: 401 });
     }
 
     const history = await getHistoryFromDB(userId);
     return NextResponse.json({ history });
   } catch (error: unknown) {
-    console.error('Error fetching history:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch history';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    logger.error('Error fetching history:', error);
+    const apiError = createErrorResponse(error, 'DATABASE_ERROR');
+    return NextResponse.json(apiError, { status: 500 });
   }
 }
 
@@ -24,7 +27,8 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      return NextResponse.json(createErrorResponse(error), { status: 401 });
     }
 
     const historyItem = await req.json();
@@ -32,9 +36,9 @@ export async function POST(req: Request) {
     
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error('Error adding history:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to add history';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    logger.error('Error adding history:', error);
+    const apiError = createErrorResponse(error, 'DATABASE_ERROR');
+    return NextResponse.json(apiError, { status: 500 });
   }
 }
 
@@ -43,14 +47,15 @@ export async function DELETE(req: Request) {
     const { userId } = await auth();
     
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      return NextResponse.json(createErrorResponse(error), { status: 401 });
     }
 
     await clearHistoryFromDB(userId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    console.error('Error clearing history:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to clear history';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    logger.error('Error clearing history:', error);
+    const apiError = createErrorResponse(error, 'DATABASE_ERROR');
+    return NextResponse.json(apiError, { status: 500 });
   }
 }
