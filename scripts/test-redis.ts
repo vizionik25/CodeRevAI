@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 
 // Now import after env vars are loaded
-import { redis, checkRateLimitRedis } from '../app/utils/redis';
+import { getRedis, checkRateLimitRedis } from '../app/utils/redis';
 
 async function testRedis() {
   console.log('🧪 Testing Redis connection...\n');
@@ -11,6 +11,8 @@ async function testRedis() {
   console.log('- UPSTASH_REDIS_REST_URL:', process.env.UPSTASH_REDIS_REST_URL ? '✓ Set' : '✗ Missing');
   console.log('- UPSTASH_REDIS_REST_TOKEN:', process.env.UPSTASH_REDIS_REST_TOKEN ? '✓ Set' : '✗ Missing');
   console.log('');
+  
+  const redis = getRedis();
   
   try {
     // Test 1: Basic set/get

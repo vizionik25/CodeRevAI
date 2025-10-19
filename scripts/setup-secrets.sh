@@ -83,7 +83,14 @@ echo ""
 echo "📝 Public secrets (for build time):"
 create_or_update_secret "CLERK_PUBLISHABLE_KEY" "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
 create_or_update_secret "STRIPE_PUBLISHABLE_KEY" "$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
-create_or_update_secret "STRIPE_PRICE_ID_PRO" "$NEXT_PUBLIC_STRIPE_PRICE_ID_PRO"
+create_or_update_secret "STRIPE_PRICE_ID_PRO" "$STRIPE_PRICE_ID_PRO"
+echo ""
+
+# Database and Redis secrets
+echo "📝 Database and Redis secrets:"
+create_or_update_secret "DATABASE_URL" "$DATABASE_URL"
+create_or_update_secret "UPSTASH_REDIS_REST_URL" "$UPSTASH_REDIS_REST_URL"
+create_or_update_secret "UPSTASH_REDIS_REST_TOKEN" "$UPSTASH_REDIS_REST_TOKEN"
 echo ""
 
 echo "✅ All secrets configured successfully!"
