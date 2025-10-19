@@ -11,38 +11,9 @@ if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN
   process.exit(1);
 }
 
-const { Redis } = require('@upstash/redis');
+const { getRedis, checkRateLimitRedis } = require('../app/utils/redis');
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
-async function checkRateLimitRedis(identifier, limit = 10, windowMs = 60000) {
-  const key = `rate-limit:${identifier}`;
-  const now = Date.now();
-  const windowStart = now - windowMs;
-
-  try {
-    const pipeline = redis.pipeline();
-    pipeline.zremrangebyscore(key, 0, windowStart);
-    pipeline.zadd(key, { score: now, member: `${now}` });
-    pipeline.zcard(key);
-    pipeline.expire(key, Math.ceil(windowMs / 1000));
-    
-    const results = await pipeline.exec();
-    const count = results[2];
-
-    const allowed = count <= limit;
-    const remaining = Math.max(0, limit - count);
-    const resetTime = now + windowMs;
-
-    return { allowed, remaining, resetTime };
-  } catch (error) {
-    console.error('Redis rate limit error:', error);
-    return { allowed: true, remaining: limit, resetTime: now + windowMs };
-  }
-}
+const redis = getRedis();
 
 async function testRedis() {
   console.log('🧪 Testing Redis connection...\n');

@@ -3,7 +3,7 @@ import { Redis } from '@upstash/redis';
 // Lazy initialization to avoid build-time errors
 let redisInstance: Redis | null = null;
 
-function getRedis(): Redis {
+export function getRedis(): Redis {
   // Skip initialization during build time
   if (typeof window === 'undefined' && !process.env.UPSTASH_REDIS_REST_URL) {
     // Return a dummy instance during build - it will never be called
@@ -22,8 +22,6 @@ function getRedis(): Redis {
   }
   return redisInstance;
 }
-
-export const redis = getRedis();
 
 /**
  * Distributed rate limiting using Redis
