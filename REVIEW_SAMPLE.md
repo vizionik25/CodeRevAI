@@ -1,447 +1,379 @@
-## Holistic Repository Review of vizionik25/CodeRevAI
+This is a well-structured and functional codebase, demonstrating a solid understanding of modern web development practices with Next.js, Clerk, Stripe, Gemini AI, and Upstash Redis. The application effectively handles user authentication, AI-powered code reviews (for both individual files and entire repositories), diff generation, subscription management, and user history.
 
-This review provides a comprehensive, high-level assessment of the `vizionik25/CodeRevAI` codebase, focusing on architectural patterns, cross-file concerns, security, performance, maintainability, and overall code quality. Specific file paths are mentioned for context, and actionable recommendations with code snippets are provided where applicable.
+My review will focus on architectural patterns, cross-file issues, overall code quality, and specific recommendations for comprehensive production readiness.
 
 ---
 
-### 1. Overall Architecture & Design Patterns
+## 1. Overall Architecture & Design
 
-The project follows a standard Next.js App Router structure, effectively separating UI components (`app/components`), client-side pages (`app/dashboard/page.tsx`, `app/billing/page.tsx`, `app/page.tsx`), and server-side API routes (`app/api/.../route.ts`). This is a solid foundation for a modern web application.
+The application follows a clear and maintainable layered architecture, which is a significant strength for a production-ready application:
 
-**Strengths:**
+*   **Presentation Layer (Client-side)**: `app/dashboard/page.tsx`, `app/billing/page.tsx`, `app/page.tsx`, `app/components/*`. Handles UI rendering, user interaction, and client-side logic.
+*   **Application/Service Layer (Client-side wrappers)**: `app/services/clientGeminiService.ts`, `app/services/clientHistoryService.ts`. Provides a clean interface for UI components to interact with the backend API routes, abstracting network calls and error handling.
+*   **API Gateway Layer (Next.js API Routes)**: `app/api/*/*.ts`. Acts as a secure intermediary between the client and external services. It handles authentication, input validation, sanitization, rate limiting, and orchestrates calls to backend services/APIs.
+*   **Domain/Business Logic Layer (Server-side Services)**: `app/services/githubService.ts`, `app/services/historyServiceDB.ts`, `app/services/localFileService.ts`. Encapsulates core business logic, such as fetching data from GitHub, interacting with the database, or handling local file operations.
+*   **Data Access Layer**: `app/lib/prisma.ts`. Manages interactions with the PostgreSQL database via Prisma ORM.
+*   **Cross-Cutting Concerns**: `app/utils/*`, `app/types/*`, `app/data/*`, `app/config/*`. Provides shared utilities, type definitions, constants, and environment configuration.
 
-*   **Clear Separation of Concerns:** API routes handle backend logic and external service interactions (Gemini, Stripe, Redis, Prisma), while components focus on UI.
-*   **Next.js App Router:** Leverages modern Next.js features for routing and server/client components.
-*   **Clerk Integration:** Seamless authentication is handled by Clerk, simplifying user management.
-*   **Centralized Utilities/Services:** Dedicated `app/services` and `app/utils` folders for reusable logic and external API interactions.
-*   **Lazy Initialization:** `getGeminiAI` and `getStripe` in `app/utils/apiClients.ts` correctly defer instantiation, preventing build-time issues with missing environment variables.
-*   **Database ORM:** Prisma is a good choice for type-safe database interactions.
+**Key Architectural Strengths**:
 
-**Areas for Improvement:**
+*   **Modular Design**: Clear separation of concerns, making the codebase easier to understand, test, and maintain.
+*   **Security-First Mindset**: Authentication (`Clerk`), input validation/sanitization (`app/utils/security.ts`), and webhook signature verification (`app/api/webhooks/stripe/route.ts`) are well-integrated.
+*   **Scalability**: Utilizes external, scalable services (Clerk, Stripe, Gemini, Upstash Redis, PostgreSQL) and Next.js's serverless function model. Distributed rate limiting via Redis is a good choice for horizontal scaling.
+*   **Robustness**: Client-side retry logic for API calls (`fetchWithRetry`) and graceful handling of GitHub API rate limits enhance resilience.
+*   **User Experience**: Features like `LoadingState` with progress indicators and a well-designed `ErrorMessage` component significantly improve the user experience during potentially long-running AI operations.
 
-#### 1.1. Inconsistent Client/Server Component Usage
+---
 
-While the App Router is used, the client-side/server-side boundaries could be more explicitly defined and optimized. Many components (`CodeInput.tsx`, `FeedbackDisplay.tsx`, `Header.tsx`) are client components due to `use client` directives, which is expected for interactive UI. However, some server-side logic could be offloaded to server components or server actions if they don't strictly require interactivity.
+## 2. Key Strengths
 
-**Recommendation:**
+### 2.1 Comprehensive Security Utilities
 
-*   **Consider Server Components/Actions for Data Fetching:** For initial data fetches that don't depend on user interaction (e.g., initial subscription status on `billing/page.tsx`), consider using a Server Component or Server Action pattern. This can reduce client-side bundle size and improve initial load performance.
-    *   **Example for `app/billing/page.tsx`:** Instead of `useEffect` for `fetchSubscription`, consider fetching this data directly in a Server Component wrapper for the page, or using a server action for re-fetching.
-*   **`app/dashboard/page.tsx`:** This page is entirely a client component (`'use client'`). While understandable for a highly interactive dashboard, evaluate if any parts of its initial render or less-frequently updated data could benefit from being fetched in a parent server component.
+The `app/utils/security.ts` file is a standout feature. It centralizes robust input validation and sanitization, crucial for an AI-driven application. The `sanitizeForAIPrompt` function is particularly important for preventing prompt injection, and `filterSensitiveFiles` protects user data.
 
-#### 1.2. Direct API Calls from Client Services
+### 2.2 Standardized Error Handling (Partial)
 
-The `app/services/geminiService.ts` and `app/services/historyService.ts` make direct `fetch` calls to `/api` routes. This is a common pattern in Next.js, but explicitly naming them `ClientGeminiService` or `ClientHistoryService` would make their role clearer and prevent confusion with potential server-side services (which might directly call `getGeminiAI` or `prisma`).
+The `app/types/errors.ts` defines a clear `AppError` class and `createErrorResponse` utility, promoting consistent error structures across API routes. This is excellent for debugging and building predictable API contracts.
 
-**Recommendation:**
+### 2.3 Distributed Rate Limiting
 
-*   **Clearer Naming for Client-Side API Wrappers:** Rename client-side services to `clientGeminiService.ts` and `clientHistoryService.ts` to denote their client-side usage and API proxying.
+The implementation of rate limiting using Upstash Redis (`app/utils/redis.ts`) is production-ready. It correctly leverages Redis sorted sets for efficient tracking and expiration, ensuring limits are honored across multiple instances of the application.
 
-#### 1.3. Global `any` in `app/lib/prisma.ts`
+### 2.4 Prompt Engineering Strategy
 
-The `globalThis as unknown as { prisma: PrismaClient | undefined; }` casting is a common pattern to avoid hot-reloading issues with Prisma. While `unknown as` is technically safe, it indicates a lack of type safety for `globalThis`.
+`app/data/prompts.ts` clearly defines various review modes and their corresponding AI instructions. The `buildPrompt` functions in the API routes intelligently combine these instructions with user inputs, demonstrating a thoughtful approach to AI interaction. The explicit instruction for AI to include file paths and line numbers in `app/api/review-repo/route.ts` is a strong detail for actionable feedback.
 
-**Recommendation:**
+### 2.5 Intuitive UI/UX
 
-*   **Refine Global Type Definition:** Consider a more precise global type declaration for `globalThis` if this pattern is used extensively, although for a single instance like Prisma, `unknown as` is often tolerated.
+The client-side components (`CodeInput.tsx`, `FeedbackDisplay.tsx`, `LoadingState.tsx`, `ErrorMessage.tsx`, `HistoryPanel.tsx`, `LocalFolderWarningModal.tsx`) work together to provide a smooth and informative user experience. The `LocalFolderWarningModal` is a great addition for user education and security awareness.
 
-### 2. Security
+---
 
-Security is a critical aspect, especially when dealing with AI prompts, user data, and payments. The project has implemented several good security practices.
+## 3. Areas for Improvement
 
-**Strengths:**
+While the codebase is strong, here are several areas for improvement to elevate its production readiness, consistency, and overall quality:
 
-*   **Clerk Authentication:** Robust authentication system.
-*   **Server-Side Input Validation & Sanitization:** `app/utils/security.ts` provides good server-side validation and sanitization for AI prompts and code, crucial for preventing prompt injection and other attacks.
-*   **Rate Limiting:** `app/utils/redis.ts` implements Redis-based rate limiting, protecting backend API endpoints from abuse.
-*   **Stripe Webhook Verification:** `app/api/webhooks/stripe/route.ts` correctly verifies Stripe webhook signatures, preventing spoofed events.
-*   **Sensitive File Filtering:** `app/utils/security.ts` and `app/services/localFileService.ts` filter out potentially sensitive files (e.g., `.env`, private keys) from repository reviews, a vital safety measure.
-*   **Environment Variables:** Sensitive keys are stored in environment variables, not hardcoded.
+### 3.1 Inconsistent Error Handling Across API Routes
 
-**Areas for Improvement:**
+The `AppError` and `createErrorResponse` pattern is used effectively in `app/api/create-checkout-session/route.ts`, `app/api/generate-diff/route.ts`, `app/api/history/route.ts`, and `app/api/review-code/route.ts`. However, `app/api/review-repo/route.ts`, `app/api/subscription/route.ts`, and `app/api/webhooks/stripe/route.ts` do not consistently use this pattern. They often `console.error` directly and return generic `{ error: message }` objects.
 
-#### 2.1. Sanitization of AI Prompt vs. Code Content
+**Impact**: Inconsistent API response formats make client-side error handling more complex and less predictable. It also prevents leveraging the rich `ErrorCode` and `retryable` metadata defined in `AppError`.
 
-The `sanitizeInput` and `sanitizeForAIPrompt` functions are well-intentioned. `sanitizeForAIPrompt` escapes Markdown characters, which is good for user-provided custom prompts to prevent AI instruction manipulation. However, for `originalCode` in `app/api/generate-diff/route.ts` and `sanitizedCode` in `app/api/review-code/route.ts`, `sanitizeInput` is used. This primarily trims and limits length. While `cleanMarkdownFences` attempts to remove AI-generated fences, it doesn't prevent user-provided code from containing `\`\`\``-like structures that could influence the AI.
+**Recommendation**: Standardize error handling in all API routes to use `AppError`, `createErrorResponse`, and the `logger` utility for consistency.
 
-**Recommendation:**
+**Example for `app/api/review-repo/route.ts`**:
 
-*   **Review Code Content Sanitization for AI:** While the primary goal for code is *not* to escape its syntax, consider if there's any risk where malformed code (e.g., containing `---` delimiters used in prompts) could break the prompt structure. The current approach is probably okay, but it's worth a double-check to ensure the AI's "Instructions" always remain dominant and un-bypassable by the `Code to Review` section.
-*   **`app/api/generate-diff/route.ts` line 67:**
-    ```typescript
-    // app/api/generate-diff/route.ts
-    // Current:
-    const sanitizedCode = sanitizeInput(originalCode);
-    // Consider if originalCode should have more aggressive escaping if AI model is vulnerable
-    // However, usually code itself should not be escaped. This is a design decision based on model robustness.
-    ```
-*   **`app/api/review-code/route.ts` line 80:**
-    ```typescript
-    // app/api/review-code/route.ts
-    // Current:
-    const sanitizedCode = sanitizeInput(code);
-    // Same consideration as above.
-    ```
-
-#### 2.2. Error Message Emojis in `scripts/test-redis.js` / `scripts/test-redis.ts`
-
-The emojis in the `test-redis` scripts are not rendered correctly in the provided manifest (e.g., `ðŸ§ª` instead of `🧪`). This is likely an encoding issue.
-
-**Recommendation:**
-
-*   **Ensure UTF-8 Encoding for Scripts:** Check the file encoding settings for these scripts to ensure they are saved as UTF-8, which correctly supports emojis across different terminals.
-
-#### 2.3. Missing Authorization for History Clear (`app/api/history/route.ts`)
-
-The `DELETE` endpoint for history doesn't check if the user is authorized to clear history *for that specific `userId`*. Clerk's `auth()` provides the `userId`, which is then used in `clearHistoryFromDB(userId)`. This ensures a user can only clear their *own* history, which is correct. The same applies to `GET` and `POST`. This is correctly implemented.
-
-**Correction:** My initial assessment was incorrect. The `auth()` function in Clerk automatically identifies the authenticated user's `userId` from the request context. This `userId` is then correctly used to fetch/add/delete *only* that user's history, effectively implementing authorization at the record level.
-
-#### 2.4. `getRedis()` during Build-Time in Client Components
-
-`app/utils/redis.ts` has a build-time check:
 ```typescript
-// app/utils/redis.ts L6-9
-  if (typeof window === 'undefined' && !process.env.UPSTASH_REDIS_REST_URL) {
-    // Return a dummy instance during build - it will never be called
-    return {} as Redis;
+// FILE: app/api/review-repo/route.ts
+// ... existing imports ...
+import { logger } from '@/app/utils/logger'; // Add logger import
+import { AppError, createErrorResponse } from '@/app/types/errors'; // Add AppError import
+
+export async function POST(req: Request) {
+  try {
+    const { userId } = await auth();
+    
+    if (!userId) {
+      // Consistent with other routes
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      return NextResponse.json(createErrorResponse(error), { status: 401 });
+    }
+
+    // ... existing rate limit logic ...
+
+    // ... existing parsing and validation ...
+    // Example: files validation
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      const error = new AppError('INVALID_INPUT', 'Files array is required and must not be empty');
+      return NextResponse.json(createErrorResponse(error), { status: 400 });
+    }
+    // ... apply AppError to other validations ...
+
+    // ... existing logic ...
+
+    return NextResponse.json(
+      { feedback },
+      {
+        headers: {
+          'X-RateLimit-Limit': '5',
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+        }
+      }
+    );
+  } catch (error: unknown) {
+    // Use the logger utility and createErrorResponse
+    logger.error('Error in repository review API:', error);
+    
+    const apiError = createErrorResponse(error, 'AI_SERVICE_ERROR'); // Fallback specific to this context
+    const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
+    
+    return NextResponse.json(
+      apiError,
+      { status: statusCode }
+    );
   }
+}
 ```
-This is good for server-side operations (e.g., API routes) during build, but `getRedis()` should strictly only be called in server environments. If `app/utils/redis.ts` is ever imported into a client component, `process.env.UPSTASH_REDIS_REST_URL` would be undefined on the client, leading to a `throw new Error('Redis configuration missing.')`. This is prevented by only calling `checkRateLimitRedis` within `/api` routes, which are server-side.
 
-**Recommendation:**
+Apply similar changes to `app/api/subscription/route.ts` and `app/api/webhooks/stripe/route.ts`.
+
+### 3.2 Client-side Propagation of `AppError`
+
+Currently, `app/services/clientGeminiService.ts` catches server-side errors and re-throws a generic `new Error(error.error || 'Failed to...')`. This loses the specific `ErrorCode` and `retryable` properties.
+
+**Impact**: `app/dashboard/page.tsx` then has to infer the error `context` (e.g., `'rate-limit'`, `'auth'`) through string matching on the error message, which is brittle and less efficient than directly checking `AppError.code`.
+
+**Recommendation**: Modify `clientGeminiService.ts` to deserialize the API error response and re-throw a client-side `AppError` instance.
+
+**Example for `app/services/clientGeminiService.ts`**:
+
+```typescript
+// FILE: app/services/clientGeminiService.ts
+import { logger } from '@/app/utils/logger';
+import { AppError, ApiError } from '@/app/types/errors'; // Import AppError and ApiError
+
+// ... fetchWithRetry function ...
+
+/**
+ * Review a single code file
+ */
+export async function reviewCode(code: string, language: string, customPrompt: string, modes: string[]): Promise<string> {
+  try {
+    const response = await fetchWithRetry('/api/review-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code,
+        language,
+        customPrompt,
+        reviewModes: modes,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: ApiError = await response.json(); // Type assertion for API error response
+      // Re-create AppError on the client to preserve specific error code and details
+      throw new AppError(
+        errorData.code || 'UNKNOWN_CLIENT_ERROR',
+        errorData.message || 'An API error occurred on the server.',
+        errorData.details,
+        errorData.retryable
+      );
+    }
+
+    const data = await response.json();
+    return data.feedback || '';
+  } catch (error) {
+    logger.error("Error calling review API:", error);
+    // If it's already an AppError, rethrow it. Otherwise, wrap generic errors.
+    if (error instanceof AppError) {
+        throw error;
+    }
+    if (error instanceof Error) {
+        throw new AppError('NETWORK_ERROR', `Error during code review: ${error.message}`, undefined, true);
+    }
+    throw new AppError('UNKNOWN_CLIENT_ERROR', "An unknown error occurred while communicating with the AI.");
+  }
+}
+
+// ... apply similar changes to reviewRepository and generateFullCodeFromReview ...
+```
+
+Then, in `app/dashboard/page.tsx`, the `handleReview` and `handleRepoReview` functions can directly check `e instanceof AppError` and use `e.code` for more robust error context mapping.
+
+### 3.3 Environment Variable Management & Validation
+
+The `app/config/env.ts` file is a good initiative for centralized environment variable management. However, several files still directly access `process.env.*`.
 
-*   **Ensure Strict Server-Side Usage:** Continue to ensure that `getRedis` and `checkRateLimitRedis` are *never* imported or called directly from client components or files that might be bundled for the client. The current usage pattern in API routes is correct.
+**Impact**: This undermines the goal of centralized, type-safe environment variable access and makes the validation in `validateEnv` less effective, as direct `process.env` access bypasses it.
+
+**Recommendation 1**: Consistently use the `publicEnv` and `serverEnv` objects defined in `app/config/env.ts` throughout the application.
+
+**Example for `app/components/Header.tsx`**:
+
+```typescript
+// FILE: app/components/Header.tsx
+import { publicEnv } from '@/app/config/env'; // Add this import
 
-### 3. Performance
+// ... other imports ...
 
-Several considerations contribute to the application's perceived and actual performance.
+export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
+  const { user } = useUser();
+  const isPro = user?.publicMetadata?.plan === 'pro';
+  
+  // Use publicEnv.STRIPE_PRICE_ID_PRO
+  const STRIPE_PRICE_IDS = {
+    pro: publicEnv.STRIPE_PRICE_ID_PRO,
+  };
+  // ... rest of the component ...
+};
+```
+Apply similar changes in `app/page.tsx`, `app/api/webhooks/stripe/route.ts`, `app/utils/apiClients.ts`, and `app/utils/redis.ts`.
+
+**Recommendation 2**: Implement hard failures for missing critical server-side environment variables in `app/config/env.ts`.
+
+**Impact**: The current `validateEnv` only logs warnings/errors. In a production environment, missing API keys or database connections should prevent the application from starting, avoiding runtime failures.
 
-**Strengths:**
+**Example for `app/config/env.ts`**:
 
-*   **Redis Rate Limiting:** Prevents abuse and potential DoS attacks on AI services.
-*   **Efficient File Content Fetching:** `fetchFilesWithContent` in `app/services/githubService.ts` caches file content, reducing redundant GitHub API calls.
-*   **Optimistic UI:** Loading states and error messages provide good user feedback during async operations.
-*   **Streaming API potential:** While not explicitly implemented for AI responses, Next.js API routes support streaming, which could be an enhancement if AI response times become critical.
-
-**Areas for Improvement:**
-
-#### 3.1. Large File/Repository Handling
-
-The `FILE_SIZE_LIMITS` (`app/data/constants.ts`) and validation in `app/utils/security.ts` are good, but the AI prompt construction in `app/api/review-repo/route.ts` creates a single large string (`allCode`) from all files. This can quickly hit the AI model's token limit, leading to truncated or incomplete reviews, or simply failing the request. The current `REPO_TOTAL_MAX: 200 * 1024` (200KB) is a sensible constraint for Gemini-2.5-flash, but users might upload larger repos.
-
-**Recommendation:**
-
-*   **Implement Chunking/Summarization for Large Repos:** For repositories exceeding a certain total size (or token count), consider:
-    *   **Summarization:** Ask the AI to summarize large files before including them in the main prompt.
-    *   **Iterative Review:** Review files in chunks, then provide a high-level review based on the individual summaries.
-    *   **Prioritization:** Allow users to prioritize certain directories or file types for review.
-    *   **Warning Message:** Provide a clear warning if the repository is too large and explain that the review might be incomplete or fail.
-*   **`app/api/review-repo/route.ts` lines 27-31:**
-    ```typescript
-    // app/api/review-repo/route.ts
-    const allCode = files.map(f => `
-    // FILE: ${f.path}
-    \`\`\`
-    ${f.content}
-    \`\`\`
-    `).join('\n---\n');
-    // This string can become very large.
-    // Consider adding truncation or a summarization step here for files/repos over a certain size.
-    ```
-*   **`app/components/CodeInput.tsx` lines 183-195:**
-    ```typescript
-    // app/components/CodeInput.tsx
-    // The handleRepoReviewClick needs to ensure that the sum of content for all files
-    // passed to onRepoReview does not exceed token limits or API payload limits.
-    // Current validation happens on the server, but client-side feedback would be better.
-    // Add client-side check using FILE_SIZE_LIMITS.REPO_TOTAL_MAX
-    // And possibly a warning if individual files are large, or total repo size is near limit.
-    ```
+```typescript
+// FILE: app/config/env.ts
+// ... existing code ...
 
-#### 3.2. `fetchWithRetry` for AI Calls
+export function validateEnv() {
+  const missingPublic: string[] = [];
+  // ... public env checks ...
+  
+  if (missingPublic.length > 0 && typeof window !== 'undefined') {
+    console.warn('Missing public environment variables:', missingPublic.join(', '));
+  }
+  
+  if (typeof window === 'undefined') {
+    const missingServer: string[] = [];
+    
+    // ... server env checks ...
+    if (!serverEnv.GEMINI_API_KEY) missingServer.push('GEMINI_API_KEY');
+    // ... all other serverEnv checks ...
+    
+    if (missingServer.length > 0) {
+      console.error('CRITICAL: Missing server environment variables:', missingServer.join(', '));
+      // For production readiness, critical missing server variables should stop the process
+      if (process.env.NODE_ENV === 'production') {
+        process.exit(1); 
+      }
+    }
+  }
+}
+```
 
-`app/services/geminiService.ts` implements a generic `fetchWithRetry` with exponential backoff. This is excellent for improving the robustness of external API calls, especially to AI services that might experience transient errors.
+### 3.4 Lack of Comprehensive Testing Strategy
 
-**Recommendation:**
+Beyond the `scripts/test-redis.js` and `scripts/test-redis.ts` (which are good for verifying Redis connectivity), there are no unit, integration, or end-to-end tests for the application's core logic.
 
-*   **Configure Retry Parameters:** Ensure the `retries` and `delay` parameters are tuned for typical AI service reliability and user patience. The current defaults (3 retries, 1s delay) are a reasonable starting point.
+**Impact**: Without tests, changes can easily introduce regressions, and refactoring becomes risky. Verifying functionality requires manual checks, which is unsustainable in production.
 
-### 4. Code Quality & Maintainability
+**Recommendation**: Implement a robust testing strategy:
+*   **Unit Tests**: For utility functions (`app/utils/*`), pure service functions (`githubService.ts`, `localFileService.ts`), and `AppError` logic. Use Jest or Vitest.
+*   **Integration Tests**: For API routes (`app/api/*`) to ensure they correctly interact with services (Prisma, Gemini, Stripe, Redis) and handle authentication/validation.
+*   **End-to-End Tests**: For critical user flows (e.g., code review, repo review, subscription process) using Playwright or Cypress.
 
-The codebase generally exhibits good practices, but some areas can be refined for enhanced clarity and long-term maintainability.
+### 3.5 Basic Observability and Logging
 
-**Strengths:**
+The `app/utils/logger.ts` provides conditional console logging, which is a good start. However, for production, observability needs to be more advanced.
 
-*   **TypeScript Usage:** Consistent use of TypeScript improves code reliability and maintainability.
-*   **Type Definitions:** `app/types/index.ts` centralizes common interfaces, which is good.
-*   **Modular Components:** Components are generally focused on a single responsibility.
-*   **Clear Naming:** Variables, functions, and files are generally well-named.
-*   **Comments & Documentation:** Key utilities (`app/utils/logger.ts`, `app/utils/markdown.ts`, `app/utils/redis.ts`, `app/data/constants.ts`, `app/data/prompts.ts`) have useful comments.
-*   **Centralized Prompts:** `app/data/prompts.ts` is an excellent way to manage AI instructions, making them easily adjustable.
+**Impact**: Debugging issues in production can be difficult with basic console logs. There's no structured logging, correlation IDs, or easy integration with monitoring tools.
 
-**Areas for Improvement:**
+**Recommendation**:
+*   **Structured Logging**: Implement structured logging (e.g., JSON format) to make logs easily parsable by log management systems (ELK stack, Splunk, DataDog, CloudWatch Logs). Add context like `userId`, `requestId`, `reviewId` to logs.
+*   **Error Reporting**: Integrate with an error tracking service (Sentry, Bugsnag) to capture and report unhandled exceptions and errors with full stack traces.
+*   **Metrics**: Consider adding basic metrics (e.g., API response times, number of reviews, rate limit hits) for monitoring performance and usage.
 
-#### 4.1. `app/types/index.ts` - `GitHubTreeFile` Redundancy
+### 3.6 Frontend Review Mode Selector Logic
 
-The `GitHubTreeFile` interface is defined in `app/types/index.ts` but seems to be used directly only in `app/services/githubService.ts`. The structure `path: string; type: string; sha: string;` in `githubService.ts` matches a subset of the defined interface.
+The `app/components/ReviewModeSelector.tsx` has some complex logic to ensure only one mode per group and a maximum of three total modes are selected. While functional, the current implementation (especially the `getGroupForMode` and how `newModes` are manipulated) could be clearer. Additionally, the description being hidden in a tooltip might impact accessibility.
 
-**Recommendation:**
+**Impact**: Code is harder to reason about and maintain. Tooltips can be inaccessible to keyboard-only users or those relying on screen readers.
 
-*   **Use the Defined Interface:** Ensure `app/services/githubService.ts` explicitly uses the `GitHubTreeFile` type from `app/types/index.ts` where appropriate for better type consistency.
-    *   **`app/services/githubService.ts` line 12:**
-        ```typescript
-        // app/services/githubService.ts
-        // Current: interface GitHubTreeFile { path: string; type: string; sha: string; }
-        // Recommendation: Remove this local definition and import from app/types/index.ts
-        import { GitHubTreeFile as GitHubAPITreeFile } from '@/app/types'; // Rename to avoid clash with local type
-        // ... then use GitHubAPITreeFile where appropriate
-        ```
+**Recommendation 1**: Simplify the mode selection logic. Perhaps by maintaining selected modes as a map of `groupName: selectedModeValue` and then consolidating, or by using a library for more complex form state. Add more comments if the current complexity is unavoidable.
 
-#### 4.2. Inconsistent Error Handling & Logging
+**Recommendation 2**: For accessibility, consider making descriptions always visible or providing an alternative method (e.g., an expandable section) for users to access the detailed mode descriptions, especially for keyboard navigation.
 
-Error messages are sometimes generic (`'An unknown error occurred.'`) which makes debugging harder. While `console.error` is used, the `logger` utility is inconsistently applied. The `ErrorMessage` component tries to infer context, which is helpful, but the API endpoints themselves should provide more specific error codes or types.
+### 3.7 Incomplete Stripe Webhook Handling
 
-**Recommendation:**
+In `app/api/webhooks/stripe/route.ts`, there are `TODO` comments for `customer.subscription.created`, `invoice.payment_succeeded`, and `invoice.payment_failed`.
 
-*   **Standardize API Error Responses:** Implement a consistent error response structure from all API routes (e.g., `{ code: 'RATE_LIMIT_EXCEEDED', message: 'Rate limit exceeded.' }`). This would allow the client to parse errors reliably and display more specific messages without relying on string matching (`errorMessage.toLowerCase().includes('rate limit')`).
-*   **Consistent Logger Usage:** Use `logger.error`, `logger.warn`, `logger.info`, `logger.debug` consistently across the entire codebase, especially in API routes and services.
-    *   **Example from `app/api/create-checkout-session/route.ts` line 40:**
-        ```typescript
-        // app/api/create-checkout-session/route.ts
-        // Current:
-        console.error('Error creating checkout session:', error);
-        // Recommendation:
-        import { logger } from '@/app/utils/logger';
-        logger.error('Error creating checkout session:', error);
-        ```
-*   **`app/dashboard/page.tsx` Error Context Detection (lines 92-98 and 130-136):**
-    ```typescript
-    // app/dashboard/page.tsx
-    // Current approach relies on string matching:
-    if (errorMessage.toLowerCase().includes('rate limit')) {
-        setErrorContext('rate-limit');
-    } // ...
-    // Recommendation: Use a structured error response from the API, e.g.,
-    // if (errorData.code === 'RATE_LIMIT_EXCEEDED') {
-    //     setErrorContext('rate-limit');
-    // }
-    ```
+**Impact**: Critical business logic for handling various subscription lifecycle events and payment statuses is missing. This could lead to out-of-sync user subscription statuses or unhandled payment issues.
 
-#### 4.3. Prop Drilling in `app/dashboard/page.tsx`
+**Recommendation**: Implement the logic for these webhook events.
+*   **`customer.subscription.created`**: Ensure user's `plan` in Clerk and database reflects the new subscription, even if `checkout.session.completed` already covers initial creation.
+*   **`invoice.payment_succeeded`**: Potentially log payment history, update user credits (if applicable), or trigger internal notifications.
+*   **`invoice.payment_failed`**: Implement logic to notify the user, retry payment, or downgrade subscription if necessary.
 
-`app/dashboard/page.tsx` acts as a central hub, passing many states and setters (`code`, `setCode`, `customPrompt`, `setCustomPrompt`, `setError`, `reviewModes`, `setReviewModes`, `directoryHandle`, `setDirectoryHandle`) down to `CodeInput`. While manageable for this size, it's a pattern to watch as the application grows.
+### 3.8 Missing Top-Level Documentation
 
-**Recommendation:**
+The repository lacks a `README.md` file that explains the project, its setup, features, and how to contribute or deploy.
 
-*   **Context API or Zustand/Jotai:** For a more scalable approach, consider using React Context API or a lightweight state management library like Zustand or Jotai to manage global states like `reviewModes`, `customPrompt`, and error states. This would reduce prop drilling and make `CodeInput` more reusable.
+**Impact**: New developers will struggle to get started. Operational teams won't have clear instructions for deployment or troubleshooting.
 
-#### 4.4. `LanguageOverrideSelector` and `LANGUAGES`
-
-`app/data/constants.ts` defines `LANGUAGES` with many options, but `LANGUAGE_OVERRIDE_OPTIONS` only lists a subset (`python`, `javascript`, `typescript`, `php`). This might be intentional, but if users are expected to review other languages, the override list should be expanded.
-
-**Recommendation:**
-
-*   **Align Language Lists:** If the goal is to support more languages, `LANGUAGE_OVERRIDE_OPTIONS` should dynamically derive from `LANGUAGES` or be updated to include all supported options.
-
-#### 4.5. `ReviewModeSelector` Logic
-
-The `ReviewModeSelector` limits selections to `MAX_SELECTIONS = 3` and enforces "one mode from each group" by deselecting others in the same group. This logic is a bit complex.
-
-**Recommendation:**
-
-*   **Simplify or Clarify UX:** While functional, the logic could be simplified. If a group only has one mode (like "Code Generation" and "Production Readiness"), a radio button or a simple toggle might be clearer than a checkbox that implicitly deselects other modes in the same group. Document this behavior clearly in the UI.
-
-#### 4.6. Unhandled Event Types in Stripe Webhook
-
-`app/api/webhooks/stripe/route.ts` has `TODO` comments for several Stripe event types (`customer.subscription.created`, `invoice.payment_succeeded`, `invoice.payment_failed`). While `checkout.session.completed`, `customer.subscription.updated`, and `customer.subscription.deleted` are handled, the others are important for a complete billing system.
-
-**Recommendation:**
-
-*   **Complete Webhook Handling:** Implement the `TODO` sections for all relevant Stripe events to ensure accurate subscription and payment tracking. This is crucial for a production-ready billing system.
-
-#### 4.7. Explicit Types for `process.env` in `next.config.js`
-
-The `env` block in `next.config.js` is correct, but for larger projects, explicitly typing `process.env` using `next-env.d.ts` or similar can improve developer experience.
-
-**Recommendation:**
-
-*   **Type `process.env`:** Create a `next-env.d.ts` or `env.d.ts` file to declare the types of environment variables, especially `NEXT_PUBLIC_*` ones, for better type safety when accessing them (e.g., `process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO`).
-
-#### 4.8. `LoaderIcon` vs. `LoadingState`
-
-The `LoaderIcon` is used directly in `app/components/FeedbackDisplay.tsx` and also internally by `LoadingState`. `app/components/LoadingState.tsx` already handles complex loading messages and progress.
-
-**Recommendation:**
-
-*   **Consolidate Loading Indicators:** Prefer using `LoadingState` whenever a loading indicator is needed, as it provides richer feedback. If `LoaderIcon` is only used inside `LoadingState`, it can be made a private component within that file or removed from public export.
-
-#### 4.9. File System Access API Fallback in Iframes
-
-`app/components/CodeInput.tsx` attempts to detect if it's in an iframe and falls back to a file input if `window.self !== window.top`. This is a reasonable fallback for restricted environments.
-
-**Recommendation:**
-
-*   **User Feedback for File System Access API:** When the File System Access API is not available (e.g., in an iframe or older browser), provide clearer user feedback that the "Select Local Folder" feature might be limited and they might need to use the "Paste Code Manually" or "Upload Files" (if implemented via `fileInputRef.current?.click()`).
-
-### 5. Reliability & Error Handling
-
-Error handling is implemented across API routes and client-side components.
-
-**Strengths:**
-
-*   **`ErrorMessage` Component:** Provides a user-friendly way to display errors with actionable solutions and context-specific tips.
-*   **`Notification` Component:** Simple, dismissible error notification.
-*   **Retry Logic:** `fetchWithRetry` in `app/services/geminiService.ts` enhances API call reliability.
-*   **`logger` Utility:** Helps in debugging by conditionally logging messages in development.
-
-**Areas for Improvement:**
-
-#### 5.1. `app/dashboard/page.tsx` - Error Handling Detail
-
-The `handleReview` and `handleRepoReview` functions in `app/dashboard/page.tsx` catch errors and set `setError` and `setErrorContext` based on string matching. As noted previously, this could be more robust.
-
-**Recommendation:**
-
-*   **Structured Error Objects:** Instead of throwing `new Error(error.error || 'Failed to review code')`, the API routes should return structured error objects (e.g., `{ type: 'RateLimitError', message: 'Rate limit exceeded.' }`) that the client can then directly use to set `setErrorContext` without unreliable string matching.
-
-#### 5.2. `app/utils/redis.ts` - Fallback on Redis Error
-
-The `checkRateLimitRedis` function has a fallback: `return { allowed: true, remaining: limit, resetTime: now + windowMs };` if Redis fails. This is a common strategy, but it means if Redis goes down, rate limiting is effectively disabled.
-
-**Recommendation:**
-
-*   **Consider Fail-Closed vs. Fail-Open:** Depending on the application's criticality and resource constraints, consider whether "fail-open" (current behavior, allows requests) or "fail-closed" (blocks requests if rate limiting system is down) is preferable. For a public-facing API that relies heavily on AI, failing open might expose you to higher costs. If Redis is down, it might be better to temporarily block new AI requests to prevent runaway API usage, perhaps returning a 503 Service Unavailable or 429 Too Many Requests until Redis recovers.
-    *   **`app/utils/redis.ts` lines 50-52:**
-        ```typescript
-        // app/utils/redis.ts
-        // Current:
-        console.error('Redis rate limit error:', error);
-        // Fallback: allow the request if Redis fails
-        return { allowed: true, remaining: limit, resetTime: now + windowMs };
-        // Recommendation (Fail-Closed alternative):
-        // throw new Error('Rate limit service unavailable');
-        // Or return { allowed: false, remaining: 0, resetTime: now + windowMs };
-        ```
-
-### 6. User Experience (UX) Considerations
-
-The UI is generally responsive and provides good feedback.
-
-**Strengths:**
-
-*   **Loading States:** `LoadingState.tsx` offers detailed, step-by-step progress, which improves user perception during longer AI processing times.
-*   **Error Messages:** The `ErrorMessage` component is informative and tries to guide the user.
-*   **History Panel:** Provides a useful way to revisit past reviews.
-*   **Responsive Design:** Tailwind CSS is used effectively for a responsive layout.
-
-**Areas for Improvement:**
-
-#### 6.1. Save/Download Buttons in `FeedbackDisplay.tsx`
-
-The `FeedbackDisplay` component allows saving the feedback as Markdown and saving the diffed code as a `.bak` file for local folders.
-
-**Recommendation:**
-
-*   **Clearer Labels/Tooltips:**
-    *   The "Save to .bak" button in `app/components/FeedbackDisplay.tsx` should clearly indicate which file it's saving *to* and *where* (e.g., "Save to `original.ts.bak`"). The current tooltip is good for *why* it's disabled, but the active state could be more explicit.
-    *   **`app/components/FeedbackDisplay.tsx` lines 105-117:**
-        ```typescript
-        // app/components/FeedbackDisplay.tsx
-        // Current tooltip for "Save to .bak" when disabled:
-        // title={!directoryHandle ? "Save is only available for local folder reviews" : `Save changes to ${selectedFile?.path}.bak`}
-        // Recommendation: Enhance active tooltip for clarity, e.g.,
-        // title={`Save refactored code to ${selectedFile?.path}.bak in your local folder.`}
-        ```
-
-#### 6.2. `CodePasteModal` Usability
-
-The `CodePasteModal` is functional, but `onClick={(e) => e.stopPropagation()}` prevents closing the modal when clicking inside it, which is good.
-
-**Recommendation:**
-
-*   **Keyboard Accessibility:** Ensure the modal is fully keyboard-accessible (e.g., using `Escape` to close, `Tab` to navigate).
-
-### 7. Cross-Cutting Concerns
-
-#### 7.1. Environment Variables Naming
-
-`process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO` is accessed directly in `app/page.tsx` and `app/components/Header.tsx`.
-
-**Recommendation:**
-
-*   **Centralize Environment Variable Access:** For better organization and consistency, consider creating a single utility file (e.g., `app/config/env.ts`) that exports all environment variables, casting them to their expected types and providing fallback defaults. This makes it easier to manage and mock during testing.
-    *   **Example `app/config/env.ts`:**
-        ```typescript
-        // app/config/env.ts
-        export const env = {
-          CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!,
-          STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-          STRIPE_PRICE_ID_PRO: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO!,
-          GEMINI_API_KEY: process.env.GEMINI_API_KEY!, // server-side only
-          STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!, // server-side only
-          // ... other env vars
-        };
-        ```
-        Then, import `env` where needed.
-
-#### 7.2. Prompt Injection Mitigation
-
-The `sanitizeForAIPrompt` function in `app/utils/security.ts` attempts to escape Markdown characters to prevent users from injecting new instructions into the AI prompt. This is a crucial step.
-
-**Recommendation:**
-
-*   **Robust Prompt Engineering:** Beyond escaping, ensure that the core prompt instructions are designed to be resilient. For instance, putting the user's custom prompt *after* a clear "You MUST follow these instructions" section and using delimiters like `---` can help. The current `buildPrompt` functions in `app/api/review-code/route.ts` and `app/api/review-repo/route.ts` already use this approach (placing custom prompts at the end with `---` delimiters), which is good.
-*   **Monitor AI Outputs:** Continuously monitor AI outputs in production for any signs of prompt injection success to refine sanitization and prompt design.
-
-#### 7.3. Test Coverage
-
-While not directly part of the code, a comprehensive review includes considering test coverage. No explicit test files are provided (other than the Redis test scripts).
-
-**Recommendation:**
-
-*   **Implement Unit and Integration Tests:**
-    *   **Utilities:** Critical utilities like `sanitizeInput`, `validateCodeInput`, `parseGitHubUrl`, `checkRateLimitRedis` should have robust unit tests.
-    *   **API Routes:** Integration tests for API routes to ensure they handle various inputs (valid/invalid code, authenticated/unauthenticated requests, rate limits) correctly and return expected responses.
-    *   **Services:** Test `githubService`, `geminiService`, and `historyServiceDB`.
-    *   **Components:** Basic UI tests for critical components (e.g., ensuring buttons are disabled when expected).
+**Recommendation**: Create a comprehensive `README.md` including:
+*   Project overview and purpose.
+*   Key features.
+*   Technology stack.
+*   Setup and installation instructions (including environment variables).
+*   Deployment guide.
+*   Testing instructions.
+*   Contribution guidelines.
 
 ---
 
-### Conclusion
+## 4. Specific Code Feedback
 
-The `CodeRevAI` project is well-structured and demonstrates a good understanding of building a modern Next.js application with AI and payment integrations. Key security measures like input validation, rate limiting, and webhook verification are in place. The use of TypeScript and clear component/service separation contributes to maintainability.
+### 4.1 `app/services/historyServiceDB.ts` - Code Snippet Storage
 
-The primary areas for improvement revolve around refining error handling for more specificity, enhancing robustness for very large inputs, and expanding test coverage for critical logic. Addressing these points will further strengthen the application's reliability, security, and developer experience.
+```typescript
+// FILE: app/services/historyServiceDB.ts
+// ...
+export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem, 'id'>): Promise<void> {
+  try {
+    await prisma.reviewHistory.create({
+      data: {
+        // ...
+        codeSnippet: item.code?.substring(0, 500), // Store first 500 chars
+        // ...
+      },
+    });
+  } catch (error) {
+    // ...
+  }
+}
+```
+**Issue**: Storing only the first 500 characters of the code snippet might be insufficient for displaying context in the history panel or re-running a review from history accurately. If the goal is to store the full code for re-evaluation, 500 characters is too short. If it's just for display, it's fine.
+
+**Recommendation**:
+*   **Clarify Purpose**: If the history is meant to allow users to fully retrieve and interact with their past reviewed code, consider increasing the storage limit significantly or storing the full code.
+*   **Data Model**: If full code storage becomes too large for the database, consider storing a reference to an object storage (S3, GCS) where the full code is kept, and only the reference is in Prisma.
+*   **User Expectation**: Ensure the UI (e.g., `HistoryPanel`) accurately reflects that only a snippet (or partial code) is available if the full code is not stored.
+
+### 4.2 `app/utils/redis.ts` - Fail-Open for Rate Limiting
+
+```typescript
+// FILE: app/utils/redis.ts
+// ...
+export async function checkRateLimitRedis(
+  identifier: string,
+  limit: number = 10,
+  windowMs: number = 60000 // 1 minute
+): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
+  // ...
+  try {
+    // ... Redis operations ...
+  } catch (error) {
+    console.error('Redis rate limit error:', error);
+    // Fallback: allow the request if Redis fails
+    return { allowed: true, remaining: limit, resetTime: now + windowMs };
+  }
+}
+```
+**Issue**: The `catch` block for `checkRateLimitRedis` explicitly allows the request (`allowed: true`) if Redis operations fail. This is a "fail-open" approach.
+
+**Impact**: While this improves robustness by preventing a Redis outage from completely blocking the application, it disables a critical security and cost-management feature (rate limiting). An attacker could exploit a Redis failure to bypass rate limits.
+
+**Recommendation**: For high-security or cost-sensitive operations, a "fail-closed" approach (`allowed: false`) might be preferred, or at least a configurable option. If "fail-open" is chosen, ensure it's a conscious decision with mitigation strategies (e.g., circuit breakers, secondary rate limiters, alerts for Redis failures). In this context, given the AI costs, it's a notable risk.
 
 ---
-**Suggested Changes Summary:**
 
-1.  **Architecture:**
-    *   **`app/billing/page.tsx`**: Consider Server Components for initial subscription data fetch.
-    *   **`app/services/geminiService.ts`, `app/services/historyService.ts`**: Rename to `clientGeminiService.ts`, `clientHistoryService.ts` for clarity.
+## 5. Summary
 
-2.  **Security:**
-    *   **`app/api/generate-diff/route.ts` L67, `app/api/review-code/route.ts` L80**: Re-evaluate `sanitizeInput` for code content in AI prompts (design decision).
-    *   **`scripts/test-redis.js`, `scripts/test-redis.ts`**: Ensure UTF-8 encoding for scripts to display emojis correctly.
+The codebase for CodeRevAI is generally well-architected and demonstrates a strong foundation. The focus on security with input sanitization and sensitive file filtering, combined with a modern tech stack and thoughtful UI/UX, are commendable.
 
-3.  **Performance:**
-    *   **`app/api/review-repo/route.ts` L27-31**: Implement chunking, summarization, or advanced user warnings for large repository reviews to manage AI token limits.
-    *   **`app/components/CodeInput.tsx` L183-195**: Add client-side size validation for local folder/repo content.
+To further harden it for production and enhance long-term maintainability, prioritize:
 
-4.  **Code Quality & Maintainability:**
-    *   **`app/services/githubService.ts` L12**: Use `GitHubTreeFile` from `app/types/index.ts` consistently.
-    *   **All API Routes/Services**: Adopt a structured error response format (e.g., `{ code: 'ERROR_TYPE', message: '...' }`).
-    *   **All API Routes/Services**: Use `logger` utility consistently instead of `console.error`/`console.warn`.
-    *   **`app/dashboard/page.tsx`**: Consider React Context or a lightweight state management library to reduce prop drilling.
-    *   **`app/data/constants.ts`**: Align `LANGUAGE_OVERRIDE_OPTIONS` with `LANGUAGES` or clearly document the subset.
-    *   **`app/components/FeedbackDisplay.tsx` L105-117**: Enhance tooltips for the "Save to .bak" button to be more explicit.
-    *   **`app/api/webhooks/stripe/route.ts`**: Implement `TODO` sections for `customer.subscription.created`, `invoice.payment_succeeded`, `invoice.payment_failed` events.
-    *   **`next.config.js`**: Consider typing `process.env` in a `next-env.d.ts` file.
+1.  **Standardizing Error Handling**: Ensure all API routes consistently use the `AppError` pattern, and client-side services propagate these specific error types.
+2.  **Robust Environment Variable Management**: Consistently use the `env.ts` configuration and implement hard failures for missing server-side environment variables in production.
+3.  **Comprehensive Testing**: Introduce unit and integration tests to ensure code correctness and stability.
+4.  **Enhanced Observability**: Implement structured logging and integrate with error reporting tools for better operational insights.
 
-5.  **Reliability & Error Handling:**
-    *   **`app/utils/redis.ts` L50-52**: Review fail-open strategy for Redis rate limiting and consider a fail-closed alternative if appropriate for cost control.
-
-6.  **Cross-Cutting Concerns:**
-    *   **Environment Variables**: Centralize access to environment variables in a dedicated configuration file (e.g., `app/config/env.ts`).
-    *   **Test Coverage**: Introduce unit and integration tests for critical utilities, API routes, and services.
+Addressing these points will significantly improve the application's resilience, debuggability, and overall readiness for sustained production use.
