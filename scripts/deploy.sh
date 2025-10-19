@@ -34,8 +34,11 @@ echo "🔑 Fetching public keys from Secret Manager..."
 CLERK_PUB_KEY=$(gcloud secrets versions access latest --secret="CLERK_PUBLISHABLE_KEY" 2>/dev/null || echo "")
 STRIPE_PUB_KEY=$(gcloud secrets versions access latest --secret="STRIPE_PUBLISHABLE_KEY" 2>/dev/null || echo "")
 STRIPE_PRICE_ID=$(gcloud secrets versions access latest --secret="STRIPE_PRICE_ID_PRO" 2>/dev/null || echo "")
+DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL" 2>/dev/null || echo "")
+REDIS_URL=$(gcloud secrets versions access latest --secret="UPSTASH_REDIS_REST_URL" 2>/dev/null || echo "")
+REDIS_TOKEN=$(gcloud secrets versions access latest --secret="UPSTASH_REDIS_REST_TOKEN" 2>/dev/null || echo "")
 
-if [ -z "$CLERK_PUB_KEY" ] || [ -z "$STRIPE_PUB_KEY" ] || [ -z "$STRIPE_PRICE_ID" ]; then
+if [ -z "$CLERK_PUB_KEY" ] || [ -z "$STRIPE_PUB_KEY" ] || [ -z "$STRIPE_PRICE_ID" ] || [ -z "$DATABASE_URL" ] || [ -z "$REDIS_URL" ] || [ -z "$REDIS_TOKEN" ]; then
     echo "⚠️  Warning: Some secrets are missing. Build may fail."
     echo "   Run ./scripts/setup-secrets.sh to configure secrets"
 fi
@@ -55,7 +58,7 @@ TIMEOUT="300"
 echo "🔨 Building Docker image with Cloud Build..."
 gcloud builds submit \
   --config cloudbuild.yaml \
-  --substitutions=_CLERK_PUBLISHABLE_KEY="$CLERK_PUB_KEY",_STRIPE_PUBLISHABLE_KEY="$STRIPE_PUB_KEY",_STRIPE_PRICE_ID_PRO="$STRIPE_PRICE_ID"
+  --substitutions=_CLERK_PUBLISHABLE_KEY="$CLERK_PUB_KEY",_STRIPE_PUBLISHABLE_KEY="$STRIPE_PUB_KEY",_STRIPE_PRICE_ID_PRO="$STRIPE_PRICE_ID",_DATABASE_URL="$DATABASE_URL",_UPSTASH_REDIS_REST_URL="$REDIS_URL",_UPSTASH_REDIS_REST_TOKEN="$REDIS_TOKEN"
 
 echo ""
 echo "🚀 Deploying to Cloud Run..."
