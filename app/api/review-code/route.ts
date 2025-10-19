@@ -11,6 +11,8 @@ import {
 import { checkRateLimitRedis } from '@/app/utils/redis';
 import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
 import { getGeminiAI } from '@/app/utils/apiClients';
+import { logger } from '@/app/utils/logger';
+import { AppError, createErrorResponse } from '@/app/types/errors';
 
 function buildPrompt(code: string, language: string, customPrompt: string, modes: string[]): string {
   const activeModes = modes.length > 0 ? modes : ['comprehensive'];
@@ -52,8 +54,9 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     
     if (!userId) {
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        createErrorResponse(error),
         { status: 401 }
       );
     }
@@ -61,8 +64,14 @@ export async function POST(req: Request) {
     // Rate limiting - 20 requests per minute per user
     const rateLimit = await checkRateLimitRedis(`review-code:${userId}`, 20, 60000);
     if (!rateLimit.allowed) {
+      const error = new AppError(
+        'RATE_LIMIT_EXCEEDED',
+        'Rate limit exceeded. Please try again later.',
+        undefined,
+        true
+      );
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
+        createErrorResponse(error),
         { 
           status: 429,
           headers: {
@@ -80,32 +89,36 @@ export async function POST(req: Request) {
     // Validate inputs
     const codeValidation = validateCodeInput(code);
     if (!codeValidation.valid) {
+      const error = new AppError('INVALID_INPUT', codeValidation.error || 'Invalid code input');
       return NextResponse.json(
-        { error: codeValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const languageValidation = validateLanguage(language);
     if (!languageValidation.valid) {
+      const error = new AppError('INVALID_INPUT', languageValidation.error || 'Invalid language');
       return NextResponse.json(
-        { error: languageValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const promptValidation = validateCustomPrompt(customPrompt || '');
     if (!promptValidation.valid) {
+      const error = new AppError('INVALID_INPUT', promptValidation.error || 'Invalid custom prompt');
       return NextResponse.json(
-        { error: promptValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const modesValidation = validateReviewModes(reviewModes || []);
     if (!modesValidation.valid) {
+      const error = new AppError('INVALID_INPUT', modesValidation.error || 'Invalid review modes');
       return NextResponse.json(
-        { error: modesValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
@@ -144,11 +157,17 @@ export async function POST(req: Request) {
       }
     );
   } catch (error: unknown) {
-    console.error('Error in code review API:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while reviewing code';
+    logger.error('Error in code review API:', error);
+    
+    const apiError = error instanceof AppError 
+      ? createErrorResponse(error)
+      : createErrorResponse(error, 'AI_SERVICE_ERROR');
+    
+    const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
+    
     return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
+      apiError,
+      { status: statusCode }
     );
   }
 }

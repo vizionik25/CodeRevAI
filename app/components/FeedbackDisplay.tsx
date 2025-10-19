@@ -9,7 +9,7 @@ import { ErrorMessage } from './ErrorMessage';
 import { LoaderIcon } from './icons/LoaderIcon';
 import { CodeFile } from '@/app/types';
 import { downloadFile } from '../utils/fileUtils';
-import { generateFullCodeFromReview } from '../services/geminiService';
+import { generateFullCodeFromReview } from '../services/clientGeminiService';
 import { saveFileWithBakExtension } from '../services/localFileService';
 
 interface FeedbackDisplayProps {

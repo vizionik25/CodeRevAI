@@ -5,10 +5,11 @@ import { FeedbackDisplay } from '../components/FeedbackDisplay';
 import { Header } from '../components/Header';
 import Notification from '../components/Notification';
 import { HistoryPanel } from '../components/HistoryPanel';
-import { reviewCode, reviewRepository } from '../services/geminiService';
-import { getHistory, addHistoryItem, clearHistory } from '../services/historyService';
+import { reviewCode, reviewRepository } from '../services/clientGeminiService';
+import { getHistory, addHistoryItem, clearHistory } from '../services/clientHistoryService';
 import { LANGUAGES } from '@/app/data/constants';
 import { CodeFile, HistoryItem } from '@/app/types';
+import { ApiError } from '@/app/types/errors';
 import { logger } from '@/app/utils/logger';
 
 export default function HomePage() {
@@ -68,19 +69,48 @@ export default function HomePage() {
       setHistory(updatedHistory);
 
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(`Failed to get review: ${errorMessage}`);
-      // Detect error context from error message
-      if (errorMessage.toLowerCase().includes('rate limit')) {
-        setErrorContext('rate-limit');
-      } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
-        setErrorContext('auth');
-      } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
-        setErrorContext('network');
-      } else {
-        setErrorContext('review');
+      let errorMessage = 'An unknown error occurred.';
+      let context: typeof errorContext = 'review';
+      
+      // Handle structured API errors
+      if (e && typeof e === 'object' && 'code' in e) {
+        const apiError = e as ApiError;
+        errorMessage = apiError.message;
+        
+        // Map error codes to contexts
+        switch (apiError.code) {
+          case 'RATE_LIMIT_EXCEEDED':
+            context = 'rate-limit';
+            break;
+          case 'UNAUTHORIZED':
+            context = 'auth';
+            break;
+          case 'FILE_TOO_LARGE':
+          case 'INVALID_INPUT':
+            context = 'file';
+            break;
+          case 'AI_SERVICE_ERROR':
+          case 'SERVICE_UNAVAILABLE':
+            context = 'network';
+            break;
+          default:
+            context = 'review';
+        }
+      } else if (e instanceof Error) {
+        errorMessage = e.message;
+        // Fallback to string matching for non-API errors
+        if (errorMessage.toLowerCase().includes('rate limit')) {
+          context = 'rate-limit';
+        } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
+          context = 'auth';
+        } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+          context = 'network';
+        }
       }
-      logger.error(e);
+      
+      setError(`Failed to get review: ${errorMessage}`);
+      setErrorContext(context);
+      logger.error('Review error:', e);
     } finally {
       setIsLoading(false);
     }
@@ -113,19 +143,49 @@ export default function HomePage() {
       setHistory(updatedHistory);
       
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setError(`Failed to get review: ${errorMessage}`);
-      // Detect error context
-      if (errorMessage.toLowerCase().includes('rate limit')) {
-        setErrorContext('rate-limit');
-      } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
-        setErrorContext('auth');
-      } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
-        setErrorContext('network');
-      } else {
-        setErrorContext('review');
+      let errorMessage = 'An unknown error occurred.';
+      let context: typeof errorContext = 'review';
+      
+      // Handle structured API errors
+      if (e && typeof e === 'object' && 'code' in e) {
+        const apiError = e as ApiError;
+        errorMessage = apiError.message;
+        
+        // Map error codes to contexts
+        switch (apiError.code) {
+          case 'RATE_LIMIT_EXCEEDED':
+            context = 'rate-limit';
+            break;
+          case 'UNAUTHORIZED':
+            context = 'auth';
+            break;
+          case 'REPO_TOO_LARGE':
+          case 'INVALID_INPUT':
+            context = 'file';
+            break;
+          case 'GITHUB_API_ERROR':
+          case 'AI_SERVICE_ERROR':
+          case 'SERVICE_UNAVAILABLE':
+            context = 'network';
+            break;
+          default:
+            context = 'review';
+        }
+      } else if (e instanceof Error) {
+        errorMessage = e.message;
+        // Fallback to string matching for non-API errors
+        if (errorMessage.toLowerCase().includes('rate limit')) {
+          context = 'rate-limit';
+        } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
+          context = 'auth';
+        } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
+          context = 'network';
+        }
       }
-      logger.error(e);
+      
+      setError(`Failed to get review: ${errorMessage}`);
+      setErrorContext(context);
+      logger.error('Repository review error:', e);
     } finally {
       setIsLoading(false);
     }
