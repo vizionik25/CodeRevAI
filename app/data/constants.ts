@@ -84,10 +84,11 @@ export const FILE_SIZE_LIMITS = {
   /** Maximum size for individual local files (212MB) */
   LOCAL_FILE_MAX: 222240800,
   
-  /** Maximum total content size for repository reviews (200KB) 
-   * Repositories contain multiple files, so aggregate size must be smaller
+  /** Maximum total content size for repository reviews (50MB) 
+   * Repositories contain multiple files, so aggregate size can be substantial
+   * Set to match Gemini's context window capacity
    */
-  REPO_TOTAL_MAX: 200 * 1024,
+  REPO_TOTAL_MAX: 50 * 1024 * 1024,
   
   /** Maximum size for single code input via paste/editor (212MB) */
   SINGLE_CODE_INPUT_MAX: 222240800,
