@@ -49,15 +49,22 @@ ${customPrompt.trim()}
 }
 
 export async function POST(req: Request) {
+  // Extract request ID from headers (set by middleware)
+  const requestId = req.headers.get('X-Request-ID') || `req_${Date.now()}`;
+  const startTime = Date.now();
+  
   try {
+    logger.info('Code review request started', { endpoint: '/api/review-code' }, requestId);
+    
     // Check authentication
     const { userId } = await auth();
     
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      logger.warn('Unauthorized review attempt', {}, requestId);
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 401 }
+        { status: 401, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -152,6 +159,7 @@ export async function POST(req: Request) {
     );
 
     // Call Gemini AI
+    const aiStartTime = Date.now();
     const aiInstance = getGeminiAI();
 
     const response = await aiInstance.models.generateContent({
@@ -159,7 +167,22 @@ export async function POST(req: Request) {
       contents: prompt,
     });
 
+    const aiDuration = Date.now() - aiStartTime;
     const feedback = response.text || '';
+
+    // Log AI usage metrics
+    logger.info('AI request completed', {
+      model: 'gemini-2.5-flash',
+      aiDuration: `${aiDuration}ms`,
+      feedbackLength: feedback.length,
+      userId
+    }, requestId);
+
+    const totalDuration = Date.now() - startTime;
+    logger.info('Request completed successfully', {
+      totalDuration: `${totalDuration}ms`,
+      aiDuration: `${aiDuration}ms`
+    }, requestId);
 
     return NextResponse.json(
       { feedback },
@@ -168,11 +191,20 @@ export async function POST(req: Request) {
           'X-RateLimit-Limit': '20',
           'X-RateLimit-Remaining': rateLimit.remaining.toString(),
           'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+          'X-Request-ID': requestId,
         }
       }
     );
   } catch (error: unknown) {
-    logger.error('Error in code review API:', error);
+    const duration = Date.now() - startTime;
+    
+    // Convert error to proper format for logger
+    const errorInfo = error instanceof Error 
+      ? error
+      : { message: 'Unknown error', error: String(error) };
+    
+    logger.error('Error in code review API', errorInfo, requestId);
+    logger.info('Request completed with error', { duration: `${duration}ms` }, requestId);
     
     const apiError = error instanceof AppError 
       ? createErrorResponse(error)
@@ -182,7 +214,7 @@ export async function POST(req: Request) {
     
     return NextResponse.json(
       apiError,
-      { status: statusCode }
+      { status: statusCode, headers: { 'X-Request-ID': requestId } }
     );
   }
 }
