@@ -7,7 +7,7 @@ const GLOBAL_INPUT_SANITY_LIMIT = 50000; // 50KB
 
 // Maximum code length for AI review (can be larger as it's raw code)
 // Code files are typically larger than prompts/metadata
-const MAX_CODE_LENGTH = 100000; // 100KB
+const MAX_CODE_LENGTH = 222240800; // 212MB (222,240,800 bytes)
 
 /**
  * Sanitize user input to prevent injection attacks
@@ -68,7 +68,7 @@ export function validateCodeInput(code: string): { valid: boolean; error?: strin
   }
   
   if (code.length > MAX_CODE_LENGTH) {
-    return { valid: false, error: `Code exceeds maximum size of ${MAX_CODE_LENGTH / 1000}KB` };
+    return { valid: false, error: `Code exceeds maximum size of ${(MAX_CODE_LENGTH / 1024 / 1024).toFixed(1)}MB` };
   }
   
   if (code.length < 10) {

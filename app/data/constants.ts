@@ -81,19 +81,19 @@ export const REVIEW_MODE_GROUPS: ReviewModeGroup[] = [
  * These limits balance AI processing capacity with user experience
  */
 export const FILE_SIZE_LIMITS = {
-  /** Maximum size for individual local files (1MB) */
-  LOCAL_FILE_MAX: 1024 * 1024,
+  /** Maximum size for individual local files (212MB) */
+  LOCAL_FILE_MAX: 222240800,
   
   /** Maximum total content size for repository reviews (200KB) 
    * Repositories contain multiple files, so aggregate size must be smaller
    */
   REPO_TOTAL_MAX: 200 * 1024,
   
-  /** Maximum size for single code input via paste/editor (500KB) */
-  SINGLE_CODE_INPUT_MAX: 500 * 1024,
+  /** Maximum size for single code input via paste/editor (212MB) */
+  SINGLE_CODE_INPUT_MAX: 222240800,
   
-  /** Warning threshold for large files (100KB) 
+  /** Warning threshold for large files (500KB) 
    * Show warning to user but allow review to proceed
    */
-  WARNING_THRESHOLD: 100 * 1024,
+  WARNING_THRESHOLD: 500 * 1024,
 } as const;
