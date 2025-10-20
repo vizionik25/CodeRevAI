@@ -36,7 +36,7 @@ export async function getHistoryFromDB(userId: string): Promise<HistoryItem[]> {
 /**
  * Add a new review to history in database
  */
-export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem, 'id'>): Promise<void> {
+export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem, 'id'>): Promise<boolean> {
   try {
     await prisma.reviewHistory.create({
       data: {
@@ -51,9 +51,13 @@ export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem,
         timestamp: new Date(item.timestamp),
       },
     });
+
+    return true;
   } catch (error) {
+    // Log the error but do NOT throw - saving history is non-critical and should not
+    // prevent the main review flow from succeeding when the database is unavailable.
     console.error('Error saving history to database:', error);
-    throw error;
+    return false;
   }
 }
 

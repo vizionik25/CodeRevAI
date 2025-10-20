@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { getRedis, getCircuitBreakerStatus } from '@/app/utils/redis';
 import { logger } from '@/app/utils/logger';
+import { historyQueue } from '@/app/utils/historyQueue';
 
 /**
  * Health check endpoint
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
         latency: 0,
         circuitBreaker: circuitBreakerStatus.state,
         error: undefined as string | undefined
-      }
+      },
+      historyQueue: historyQueue.getStats()
     }
   };
 

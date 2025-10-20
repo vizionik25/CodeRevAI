@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { getHistoryFromDB, addHistoryItemToDB, clearHistoryFromDB } from '@/app/services/historyServiceDB';
 import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
+import { historyQueue } from '@/app/utils/historyQueue';
 
 export async function GET(req: Request) {
   try {
@@ -32,9 +33,25 @@ export async function POST(req: Request) {
     }
 
     const historyItem = await req.json();
-    await addHistoryItemToDB(userId, historyItem);
-    
-    return NextResponse.json({ success: true });
+    const saved = await addHistoryItemToDB(userId, historyItem);
+
+    if (!saved) {
+      // Queue for retry with exponential backoff
+      historyQueue.enqueue(userId, historyItem);
+      
+      logger.warn('Failed to save history item to database; queued for retry', {
+        queueSize: historyQueue.getQueueSize(),
+      });
+      
+      return NextResponse.json({ 
+        success: true, 
+        saved: false,
+        queued: true,
+        queueSize: historyQueue.getQueueSize(),
+      });
+    }
+
+    return NextResponse.json({ success: true, saved: true });
   } catch (error: unknown) {
     logger.error('Error adding history:', error);
     const apiError = createErrorResponse(error, 'DATABASE_ERROR');
