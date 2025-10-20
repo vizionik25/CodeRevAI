@@ -3,8 +3,8 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { validateEnv } from './config/env';
 import "./globals.css";
 
-// Validate environment variables on server startup
-if (typeof window === 'undefined') {
+// Validate environment variables on server startup (skip during build)
+if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
   validateEnv();
 }
 
