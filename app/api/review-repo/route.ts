@@ -13,6 +13,8 @@ import { checkRateLimitRedis } from '@/app/utils/redis';
 import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
 import { getGeminiAI } from '@/app/utils/apiClients';
 import { FILE_SIZE_LIMITS } from '@/app/data/constants';
+import { logger } from '@/app/utils/logger';
+import { AppError, createErrorResponse } from '@/app/types/errors';
 
 function buildRepoPrompt(files: Array<{ path: string; content: string }>, repoUrl: string, customPrompt: string, modes: string[]): string {
   const fileManifest = files.map(f => `- ${f.path}`).join('\n');
@@ -68,17 +70,39 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     
     if (!userId) {
+      const error = new AppError('UNAUTHORIZED', 'Authentication required');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        createErrorResponse(error),
         { status: 401 }
       );
     }
 
-    // Rate limiting - 5 requests per minute for repo reviews (more intensive)
-    const rateLimit = await checkRateLimitRedis(`review-repo:${userId}`, 5, 60000);
+    // Rate limiting - 5 requests per minute for repo reviews (more intensive, fail-closed)
+    const rateLimit = await checkRateLimitRedis(`review-repo:${userId}`, 5, 60000, true);
+    
     if (!rateLimit.allowed) {
+      // Check if circuit breaker caused the rejection
+      if (rateLimit.circuitOpen) {
+        const error = new AppError(
+          'SERVICE_UNAVAILABLE',
+          'Rate limiting service temporarily unavailable. Please try again in a few moments.',
+          'Circuit breaker open',
+          true
+        );
+        return NextResponse.json(
+          createErrorResponse(error),
+          { status: 503 }
+        );
+      }
+      
+      const error = new AppError(
+        'RATE_LIMIT_EXCEEDED',
+        'Rate limit exceeded. Repository reviews are limited to 5 per minute.',
+        undefined,
+        true
+      );
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Repository reviews are limited to 5 per minute.' },
+        createErrorResponse(error),
         { 
           status: 429,
           headers: {
@@ -95,32 +119,36 @@ export async function POST(req: Request) {
 
     // Validate inputs
     if (!files || !Array.isArray(files) || files.length === 0) {
+      const error = new AppError('INVALID_INPUT', 'Files array is required and must not be empty');
       return NextResponse.json(
-        { error: 'Files array is required and must not be empty' },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const urlValidation = validateRepoUrl(repoUrl);
     if (!urlValidation.valid) {
+      const error = new AppError('INVALID_INPUT', urlValidation.error || 'Invalid repository URL');
       return NextResponse.json(
-        { error: urlValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const promptValidation = validateCustomPrompt(customPrompt || '');
     if (!promptValidation.valid) {
+      const error = new AppError('INVALID_INPUT', promptValidation.error || 'Invalid custom prompt');
       return NextResponse.json(
-        { error: promptValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
 
     const modesValidation = validateReviewModes(reviewModes || []);
     if (!modesValidation.valid) {
+      const error = new AppError('INVALID_INPUT', modesValidation.error || 'Invalid review modes');
       return NextResponse.json(
-        { error: modesValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
@@ -129,8 +157,9 @@ export async function POST(req: Request) {
     const safeFiles = filterSensitiveFiles(files);
     
     if (safeFiles.length === 0) {
+      const error = new AppError('INVALID_INPUT', 'No valid files to review after filtering sensitive files');
       return NextResponse.json(
-        { error: 'No valid files to review after filtering sensitive files' },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
@@ -149,8 +178,9 @@ export async function POST(req: Request) {
     // Check total repository size
     const sizeValidation = validateFileSize(sanitizedFiles.map(f => f.content).join(''), FILE_SIZE_LIMITS.REPO_TOTAL_MAX);
     if (!sizeValidation.valid) {
+      const error = new AppError('REPO_TOO_LARGE', sizeValidation.error || 'Repository exceeds size limit');
       return NextResponse.json(
-        { error: sizeValidation.error },
+        createErrorResponse(error),
         { status: 400 }
       );
     }
@@ -187,11 +217,14 @@ export async function POST(req: Request) {
       }
     );
   } catch (error: unknown) {
-    console.error('Error in repository review API:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred while reviewing repository';
+    logger.error('Error in repository review API:', error);
+    
+    const apiError = createErrorResponse(error, 'AI_SERVICE_ERROR');
+    const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
+    
     return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
+      apiError,
+      { status: statusCode }
     );
   }
 }

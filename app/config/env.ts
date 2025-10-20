@@ -24,8 +24,11 @@ export const serverEnv = {
 /**
  * Validates that required environment variables are set
  * Call this during application initialization
+ * In production mode, exits process if critical variables are missing
  */
 export function validateEnv() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   // Validate public env vars (available in both client and server)
   const missingPublic: string[] = [];
   
@@ -34,7 +37,14 @@ export function validateEnv() {
   if (!publicEnv.STRIPE_PRICE_ID_PRO) missingPublic.push('NEXT_PUBLIC_STRIPE_PRICE_ID_PRO');
   
   if (missingPublic.length > 0 && typeof window !== 'undefined') {
-    console.warn('Missing public environment variables:', missingPublic);
+    const message = `Missing public environment variables: ${missingPublic.join(', ')}`;
+    if (isProduction) {
+      console.error('[FATAL]', message);
+      // Cannot exit on client side, but log critical error
+      throw new Error(message);
+    } else {
+      console.warn(message);
+    }
   }
   
   // Validate server-side env vars (only on server)
@@ -50,7 +60,14 @@ export function validateEnv() {
     if (!serverEnv.UPSTASH_REDIS_REST_TOKEN) missingServer.push('UPSTASH_REDIS_REST_TOKEN');
     
     if (missingServer.length > 0) {
-      console.error('Missing server environment variables:', missingServer);
+      const message = `Missing critical server environment variables: ${missingServer.join(', ')}`;
+      console.error('[FATAL]', message);
+      
+      if (isProduction) {
+        console.error('Application cannot start without required environment variables.');
+        console.error('Please configure all required secrets in your deployment environment.');
+        process.exit(1);
+      }
     }
   }
 }

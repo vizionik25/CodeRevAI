@@ -24,9 +24,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // Rate limiting - 15 requests per minute per user
-    const rateLimit = await checkRateLimitRedis(`generate-diff:${userId}`, 15, 60000);
+    // Rate limiting - 15 requests per minute per user (fail-closed for cost protection)
+    const rateLimit = await checkRateLimitRedis(`generate-diff:${userId}`, 15, 60000, true);
+    
     if (!rateLimit.allowed) {
+      // Check if circuit breaker caused the rejection
+      if (rateLimit.circuitOpen) {
+        const error = new AppError(
+          'SERVICE_UNAVAILABLE',
+          'Rate limiting service temporarily unavailable. Please try again in a few moments.',
+          'Circuit breaker open',
+          true
+        );
+        return NextResponse.json(
+          createErrorResponse(error),
+          { status: 503 }
+        );
+      }
+      
       const error = new AppError(
         'RATE_LIMIT_EXCEEDED',
         'Rate limit exceeded. Please try again later.',
