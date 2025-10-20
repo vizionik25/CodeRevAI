@@ -72,12 +72,12 @@ export default function HomePage() {
       let errorMessage = 'An unknown error occurred.';
       let context: typeof errorContext = 'review';
       
-      // Handle structured API errors
+      // Handle structured AppError from services
       if (e && typeof e === 'object' && 'code' in e) {
         const apiError = e as ApiError;
         errorMessage = apiError.message;
         
-        // Map error codes to contexts
+        // Map error codes to contexts for better user feedback
         switch (apiError.code) {
           case 'RATE_LIMIT_EXCEEDED':
             context = 'rate-limit';
@@ -91,21 +91,16 @@ export default function HomePage() {
             break;
           case 'AI_SERVICE_ERROR':
           case 'SERVICE_UNAVAILABLE':
+          case 'INTERNAL_ERROR':
             context = 'network';
             break;
           default:
             context = 'review';
         }
       } else if (e instanceof Error) {
+        // Fallback for unexpected non-AppError errors (shouldn't happen normally)
         errorMessage = e.message;
-        // Fallback to string matching for non-API errors
-        if (errorMessage.toLowerCase().includes('rate limit')) {
-          context = 'rate-limit';
-        } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
-          context = 'auth';
-        } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
-          context = 'network';
-        }
+        context = 'review';
       }
       
       setError(`Failed to get review: ${errorMessage}`);
@@ -146,12 +141,12 @@ export default function HomePage() {
       let errorMessage = 'An unknown error occurred.';
       let context: typeof errorContext = 'review';
       
-      // Handle structured API errors
+      // Handle structured AppError from services
       if (e && typeof e === 'object' && 'code' in e) {
         const apiError = e as ApiError;
         errorMessage = apiError.message;
         
-        // Map error codes to contexts
+        // Map error codes to contexts for better user feedback
         switch (apiError.code) {
           case 'RATE_LIMIT_EXCEEDED':
             context = 'rate-limit';
@@ -166,21 +161,16 @@ export default function HomePage() {
           case 'GITHUB_API_ERROR':
           case 'AI_SERVICE_ERROR':
           case 'SERVICE_UNAVAILABLE':
+          case 'INTERNAL_ERROR':
             context = 'network';
             break;
           default:
             context = 'review';
         }
       } else if (e instanceof Error) {
+        // Fallback for unexpected non-AppError errors (shouldn't happen normally)
         errorMessage = e.message;
-        // Fallback to string matching for non-API errors
-        if (errorMessage.toLowerCase().includes('rate limit')) {
-          context = 'rate-limit';
-        } else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('auth')) {
-          context = 'auth';
-        } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('fetch')) {
-          context = 'network';
-        }
+        context = 'review';
       }
       
       setError(`Failed to get review: ${errorMessage}`);

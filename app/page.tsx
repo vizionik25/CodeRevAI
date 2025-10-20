@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { redirectToCheckout } from './utils/stripeUtils';
 import { logger } from '@/app/utils/logger';
+import { publicEnv } from '@/app/config/env';
 
 export default function LandingPage() {
   const { isSignedIn } = useUser();
 
-  // Stripe Price IDs - Configure these in your environment or here
-  // Get these from your Stripe Dashboard after creating products
+  // Stripe Price IDs from environment configuration
   const STRIPE_PRICE_IDS = {
-    pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
+    pro: publicEnv.STRIPE_PRICE_ID_PRO,
   };
 
   const handleSubscribe = async (plan: string, priceId: string) => {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { UserButton, SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { HistoryIcon } from './icons/HistoryIcon';
 import { redirectToCheckout } from '@/app/utils/stripeUtils';
+import { publicEnv } from '@/app/config/env';
 
 interface HeaderProps {
     onToggleHistory: () => void;
@@ -14,9 +15,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
   // Check if user has a pro subscription
   const isPro = user?.publicMetadata?.plan === 'pro';
   
-  // Get Pro price ID from environment
+  // Get Pro price ID from environment configuration
   const STRIPE_PRICE_IDS = {
-    pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
+    pro: publicEnv.STRIPE_PRICE_ID_PRO,
   };
 
   const handleUpgradeClick = async () => {

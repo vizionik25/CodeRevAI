@@ -2,6 +2,46 @@
 // All AI calls are proxied through Next.js API routes to protect the API key
 
 import { logger } from '@/app/utils/logger';
+import { AppError, ApiError, ErrorCode } from '@/app/types/errors';
+
+/**
+ * Deserialize API error response and throw AppError
+ */
+async function handleApiError(response: Response): Promise<never> {
+  try {
+    const errorData: ApiError = await response.json();
+    
+    // Check if we received a structured error response
+    if (errorData.code && errorData.message) {
+      throw new AppError(
+        errorData.code,
+        errorData.message,
+        errorData.details,
+        errorData.retryable
+      );
+    }
+    
+    // Fallback for non-structured errors
+    throw new AppError(
+      'INTERNAL_ERROR',
+      errorData.message || `Request failed with status ${response.status}`,
+      undefined,
+      false
+    );
+  } catch (parseError) {
+    // If JSON parsing fails, create a generic error
+    if (parseError instanceof AppError) {
+      throw parseError;
+    }
+    
+    throw new AppError(
+      'INTERNAL_ERROR',
+      `Request failed with status ${response.status}`,
+      response.statusText,
+      false
+    );
+  }
+}
 
 /**
  * Retry a fetch request with exponential backoff
@@ -37,6 +77,7 @@ async function fetchWithRetry(
 
 /**
  * Review a single code file
+ * @throws {AppError} With proper error code and message
  */
 export async function reviewCode(code: string, language: string, customPrompt: string, modes: string[]): Promise<string> {
   try {
@@ -54,23 +95,32 @@ export async function reviewCode(code: string, language: string, customPrompt: s
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to review code');
+      await handleApiError(response);
     }
 
     const data = await response.json();
     return data.feedback || '';
   } catch (error) {
-    logger.error("Error calling review API:", error);
-    if (error instanceof Error) {
-        throw new Error(`Error during code review: ${error.message}`);
+    // If it's already an AppError, re-throw it
+    if (error instanceof AppError) {
+      logger.error('Code review error:', { code: error.code, message: error.message });
+      throw error;
     }
-    throw new Error("An unknown error occurred while communicating with the AI.");
+    
+    // Network or other errors
+    logger.error('Unexpected error during code review:', error);
+    throw new AppError(
+      'INTERNAL_ERROR',
+      error instanceof Error ? error.message : 'An unknown error occurred',
+      'Network or client-side error',
+      true // Network errors are retryable
+    );
   }
 }
 
 /**
  * Review an entire repository
+ * @throws {AppError} With proper error code and message
  */
 export async function reviewRepository(files: { path: string, content: string }[], repoUrl: string, customPrompt: string, modes: string[]): Promise<string> {
   try {
@@ -88,23 +138,32 @@ export async function reviewRepository(files: { path: string, content: string }[
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to review repository');
+      await handleApiError(response);
     }
 
     const data = await response.json();
     return data.feedback || '';
   } catch (error) {
-    logger.error("Error calling repository review API:", error);
-    if (error instanceof Error) {
-        throw new Error(`Error during repository review: ${error.message}`);
+    // If it's already an AppError, re-throw it
+    if (error instanceof AppError) {
+      logger.error('Repository review error:', { code: error.code, message: error.message });
+      throw error;
     }
-    throw new Error("An unknown error occurred while communicating with the AI.");
+    
+    // Network or other errors
+    logger.error('Unexpected error during repository review:', error);
+    throw new AppError(
+      'INTERNAL_ERROR',
+      error instanceof Error ? error.message : 'An unknown error occurred',
+      'Network or client-side error',
+      true // Network errors are retryable
+    );
   }
 }
 
 /**
  * Generate refactored code based on review feedback
+ * @throws {AppError} With proper error code and message
  */
 export async function generateFullCodeFromReview(originalCode: string, language: string, feedback: string): Promise<string> {
   try {
@@ -121,8 +180,7 @@ export async function generateFullCodeFromReview(originalCode: string, language:
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to generate modified code');
+      await handleApiError(response);
     }
 
     const data = await response.json();
@@ -130,10 +188,19 @@ export async function generateFullCodeFromReview(originalCode: string, language:
 
     return newCode.trim();
   } catch (error) {
-    logger.error("Error calling generate diff API:", error);
-    if (error instanceof Error) {
-        throw new Error(`Error generating refactored code: ${error.message}`);
+    // If it's already an AppError, re-throw it
+    if (error instanceof AppError) {
+      logger.error('Code generation error:', { code: error.code, message: error.message });
+      throw error;
     }
-    throw new Error("An unknown error occurred while communicating with the AI.");
+    
+    // Network or other errors
+    logger.error('Unexpected error during code generation:', error);
+    throw new AppError(
+      'INTERNAL_ERROR',
+      error instanceof Error ? error.message : 'An unknown error occurred',
+      'Network or client-side error',
+      true // Network errors are retryable
+    );
   }
 }

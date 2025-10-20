@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import Stripe from 'stripe';
+import { serverEnv } from '@/app/config/env';
 
 /**
  * Lazy-initialized Gemini AI client
@@ -9,8 +10,8 @@ import Stripe from 'stripe';
 let geminiAI: GoogleGenAI | null = null;
 
 export function getGeminiAI(): GoogleGenAI {
-  if (!geminiAI && process.env.GEMINI_API_KEY) {
-    geminiAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  if (!geminiAI && serverEnv.GEMINI_API_KEY) {
+    geminiAI = new GoogleGenAI({ apiKey: serverEnv.GEMINI_API_KEY });
   }
   if (!geminiAI) {
     throw new Error('Gemini API key not configured');
@@ -26,8 +27,8 @@ export function getGeminiAI(): GoogleGenAI {
 let stripeClient: Stripe | null = null;
 
 export function getStripe(): Stripe {
-  if (!stripeClient && process.env.STRIPE_SECRET_KEY) {
-    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  if (!stripeClient && serverEnv.STRIPE_SECRET_KEY) {
+    stripeClient = new Stripe(serverEnv.STRIPE_SECRET_KEY, {
       apiVersion: '2025-09-30.clover',
     });
   }
