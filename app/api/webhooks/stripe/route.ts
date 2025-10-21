@@ -53,7 +53,11 @@ export async function POST(req: NextRequest) {
         const userId = session.metadata?.userId;
         const plan = session.metadata?.plan;
 
-        console.log('Checkout session completed:', session.id);
+        logger.info('Checkout session completed', { 
+          sessionId: session.id,
+          userId: session.metadata?.userId,
+          plan: session.metadata?.plan
+        });
 
         if (userId && plan && session.customer && session.subscription) {
           // Store subscription in database
@@ -83,7 +87,11 @@ export async function POST(req: NextRequest) {
             publicMetadata: { plan: plan },
           });
 
-          console.log(`Subscription created for user ${userId}`);
+          logger.info('Subscription created for user', { 
+            userId,
+            plan,
+            subscriptionId: session.subscription
+          });
         }
         
         break;
@@ -132,7 +140,11 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const subData = subscription as any; // Stripe SDK types are incomplete
-        console.log('Subscription updated:', subscription.id);
+        logger.info('Subscription updated', { 
+          subscriptionId: subscription.id,
+          customerId: subscription.customer,
+          status: subscription.status
+        });
         
         // Find user by Stripe customer ID
         const userSub = await prisma.userSubscription.findUnique({
@@ -158,7 +170,12 @@ export async function POST(req: NextRequest) {
             publicMetadata: { plan: newPlan },
           });
 
-          console.log(`Subscription updated for customer ${subscription.customer}`);
+          logger.info('Subscription updated for customer', { 
+            customerId: subscription.customer,
+            userId: userSub.userId,
+            newPlan,
+            subscriptionStatus: subscription.status
+          });
         }
         
         break;
@@ -166,7 +183,10 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log('Subscription canceled:', subscription.id);
+        logger.info('Subscription canceled', { 
+          subscriptionId: subscription.id,
+          customerId: subscription.customer
+        });
         
         const userSub = await prisma.userSubscription.findUnique({
           where: { stripeCustomerId: subscription.customer as string },
@@ -187,7 +207,11 @@ export async function POST(req: NextRequest) {
             publicMetadata: { plan: 'free' },
           });
 
-          console.log(`Subscription canceled for customer ${subscription.customer}`);
+          logger.info('Subscription canceled for customer', { 
+            customerId: subscription.customer,
+            userId: userSub.userId,
+            subscriptionId: subscription.id
+          });
         }
         
         break;

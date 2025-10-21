@@ -5,6 +5,7 @@ import {
   validateCodeInput,
   validateLanguage,
 } from '@/app/utils/security';
+import { INPUT_LIMITS } from '@/app/data/constants';
 import { checkRateLimitRedis } from '@/app/utils/redis';
 import { cleanMarkdownFences } from '@/app/utils/markdown';
 import { getGeminiAI } from '@/app/utils/apiClients';
@@ -91,9 +92,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (feedback.length > 50000) {
+    if (feedback.length > INPUT_LIMITS.FEEDBACK_MAX) {
       return NextResponse.json(
-        { error: 'Feedback is too large' },
+        { error: 'Feedback text is too long' },
         { status: 400 }
       );
     }

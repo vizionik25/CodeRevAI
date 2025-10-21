@@ -98,3 +98,24 @@ export const FILE_SIZE_LIMITS = {
    */
   WARNING_THRESHOLD: 500 * 1024,
 } as const;
+
+/**
+ * Input validation and security limits
+ * Centralized limits for all text inputs and prompts
+ */
+export const INPUT_LIMITS = {
+  /** Global sanity limit for any text input (prompts, metadata, etc.) - 50KB */
+  GLOBAL_INPUT_SANITY_LIMIT: 50000,
+  
+  /** Maximum code length for validation (same as SINGLE_CODE_INPUT_MAX) */
+  MAX_CODE_LENGTH: 222240800,
+  
+  /** Maximum custom prompt length - 5KB */
+  CUSTOM_PROMPT_MAX: 5120,
+  
+  /** Maximum feedback length for diff generation - 50KB */
+  FEEDBACK_MAX: 50000,
+  
+  /** Default file validation limit - 200KB */
+  FILE_VALIDATION_DEFAULT: 200000,
+} as const;

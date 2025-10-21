@@ -1,5 +1,6 @@
 import { prisma } from '@/app/lib/prisma';
 import { HistoryItem } from '@/app/types';
+import { logger } from '@/app/utils/logger';
 
 /**
  * Server-side history service
@@ -28,7 +29,7 @@ export async function getHistoryFromDB(userId: string): Promise<HistoryItem[]> {
       reviewType: item.type === 'repository' ? 'repo' : 'file',
     }));
   } catch (error) {
-    console.error('Error fetching history from database:', error);
+    logger.error('Error fetching history from database:', error);
     return [];
   }
 }
@@ -56,7 +57,7 @@ export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem,
   } catch (error) {
     // Log the error but do NOT throw - saving history is non-critical and should not
     // prevent the main review flow from succeeding when the database is unavailable.
-    console.error('Error saving history to database:', error);
+    logger.error('Error saving history to database:', error);
     return false;
   }
 }
@@ -70,7 +71,7 @@ export async function clearHistoryFromDB(userId: string): Promise<void> {
       where: { userId },
     });
   } catch (error) {
-    console.error('Error clearing history from database:', error);
+    logger.error('Error clearing history from database:', error);
     throw error;
   }
 }

@@ -1,13 +1,6 @@
 // Security utilities for input validation and sanitization
 import { validateGitHubUrl as validateGitHubUrlUtil } from './githubUtils';
-
-// Global sanity limit for any text input (prompts, metadata, etc.)
-// This prevents DoS attacks from extremely large text inputs
-const GLOBAL_INPUT_SANITY_LIMIT = 50000; // 50KB
-
-// Maximum code length for AI review (can be larger as it's raw code)
-// Code files are typically larger than prompts/metadata
-const MAX_CODE_LENGTH = 222240800; // 212MB (222,240,800 bytes)
+import { INPUT_LIMITS } from '@/app/data/constants';
 
 /**
  * Sanitize user input to prevent injection attacks
@@ -26,8 +19,8 @@ export function sanitizeInput(input: string): string {
   sanitized = sanitized.trim();
   
   // Limit length to prevent DOS (before escaping to preserve original size intent)
-  if (sanitized.length > GLOBAL_INPUT_SANITY_LIMIT) {
-    sanitized = sanitized.substring(0, GLOBAL_INPUT_SANITY_LIMIT);
+  if (sanitized.length > INPUT_LIMITS.GLOBAL_INPUT_SANITY_LIMIT) {
+    sanitized = sanitized.substring(0, INPUT_LIMITS.GLOBAL_INPUT_SANITY_LIMIT);
   }
   
   return sanitized;
@@ -67,8 +60,8 @@ export function validateCodeInput(code: string): { valid: boolean; error?: strin
     return { valid: false, error: 'Code must be a non-empty string' };
   }
   
-  if (code.length > MAX_CODE_LENGTH) {
-    return { valid: false, error: `Code exceeds maximum size of ${(MAX_CODE_LENGTH / 1024 / 1024).toFixed(1)}MB` };
+  if (code.length > INPUT_LIMITS.MAX_CODE_LENGTH) {
+    return { valid: false, error: `Code exceeds maximum size of ${(INPUT_LIMITS.MAX_CODE_LENGTH / 1024 / 1024).toFixed(1)}MB` };
   }
   
   if (code.length < 10) {
@@ -90,7 +83,7 @@ export function validateCustomPrompt(prompt: string): { valid: boolean; error?: 
     return { valid: false, error: 'Prompt must be a string' };
   }
   
-  if (prompt.length > 5000) { // 5KB max for prompts
+  if (prompt.length > INPUT_LIMITS.CUSTOM_PROMPT_MAX) {
     return { valid: false, error: 'Custom prompt exceeds maximum size of 5KB' };
   }
   
@@ -209,7 +202,7 @@ export function filterSensitiveFiles(files: Array<{ path: string; content?: stri
 /**
  * Validate file size
  */
-export function validateFileSize(content: string, maxSize: number = 200000): { valid: boolean; error?: string } {
+export function validateFileSize(content: string, maxSize: number = INPUT_LIMITS.FILE_VALIDATION_DEFAULT): { valid: boolean; error?: string } {
   if (content.length > maxSize) {
     return { valid: false, error: `File size exceeds maximum of ${maxSize} bytes` };
   }
