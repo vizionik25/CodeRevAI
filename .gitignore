@@ -142,6 +142,7 @@ IMPLEMENTATION_PLAN.md
 SECURITY.md
 TODO.md
 NOTES.md
+QUICK_START*.md
 
 # Backup files that may contain sensitive data
 *.backup
