@@ -68,7 +68,7 @@ CodeRevAI is a production-ready SaaS application providing AI-powered code revie
 | Task | Status | Notes |
 |------|--------|-------|
 | **Comprehensive README** | ✅ Complete | 400+ lines with architecture, setup, deployment, environment table |
-| **ARCHITECTURE.md** | ✅ Complete | 700+ lines with system design, data flows, API specs |
+| **docs/ARCHITECTURE.md** | ✅ Complete | 700+ lines with system design, data flows, API specs |
 | **CONTRIBUTING.md** | ✅ Complete | Code style, PR process, testing requirements |
 | **Health check endpoint** | ✅ Complete | `/api/health` monitors database, Redis, circuit breaker |
 | **Testing framework setup** | ✅ Complete | Vitest with jsdom, coverage provider, test scripts |
@@ -78,7 +78,7 @@ CodeRevAI is a production-ready SaaS application providing AI-powered code revie
 
 ### Key Deliverables
 
-- **Documentation Suite:** README.md, ARCHITECTURE.md, CONTRIBUTING.md
+- **Documentation Suite:** README.md, docs/ARCHITECTURE.md, CONTRIBUTING.md
 - **Health Monitoring:** `/api/health` endpoint with structured status JSON
 - **Testing Infrastructure:** Vitest config, setup file, 31 passing tests
 - **Accessibility:** WCAG 2.1 AA compliance with keyboard navigation

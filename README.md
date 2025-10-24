@@ -266,10 +266,10 @@ node scripts/test-redis.js
 
 ## 📖 Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design and architecture diagrams
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Detailed deployment guide
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contribution guidelines
-- **[IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)** - Development progress tracker
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System design and architecture diagrams
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Detailed deployment guide
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development guidelines and setup
+- **[IMPLEMENTATION_STATUS.md](./docs/IMPLEMENTATION_STATUS.md)** - Development progress tracker
 - **[docs/STRIPE_INTEGRATION.md](./docs/STRIPE_INTEGRATION.md)** - Payment setup guide
 
 ---

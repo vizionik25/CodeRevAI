@@ -574,7 +574,7 @@ export async function checkRateLimitRedis(
 
 **Update when:**
 - Adding new features → `README.md`
-- Changing architecture → `ARCHITECTURE.md`
+- Changing architecture → `docs/ARCHITECTURE.md`
 - Modifying API → `docs/API_REFERENCE.md` (if exists)
 - Updating dependencies → `README.md` (Tech Stack)
 
@@ -635,7 +635,7 @@ Mockups, examples, etc.
 
 ## Questions?
 
-- **Documentation:** Check [README.md](./README.md) and [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Documentation:** Check [README.md](./README.md) and [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 - **Issues:** Open an issue on GitHub
 - **Discussions:** Use GitHub Discussions for questions
 - **Security:** Email security issues privately (see SECURITY.md)
