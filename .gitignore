@@ -4,7 +4,6 @@ node_modules
 .pnp.js
 
 # Testing
-coverage
 .nyc_output
 
 # Next.js
