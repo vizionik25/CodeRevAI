@@ -1,305 +1,439 @@
-This codebase, "CodeRevAI," exhibits a strong foundation, thoughtful architectural patterns, and a clear commitment to security and resilience. The use of Next.js, Clerk, Stripe, Prisma, Redis (Upstash), and Google Gemini AI is well-integrated.
+The CodeRevAI repository presents a robust, well-structured, and production-ready application. It leverages a modern tech stack including Next.js, Clerk for authentication, Stripe for payments, Gemini for AI-powered code reviews, Prisma with PostgreSQL for data persistence, and Upstash Redis for caching and rate limiting. The overall architecture demonstrates a clear separation of concerns, excellent error handling, and a strong focus on security and maintainability.
 
-## High-Level Feedback
-
-### 1. Architecture & Design
-
-*   **Modularity and Separation of Concerns (Excellent):** The project is well-structured with clear divisions between API routes, UI components, data services, utilities, and types. This makes the codebase easy to navigate and understand. Client-side services (`app/services/clientGeminiService.ts`, `app/services/clientHistoryService.ts`) correctly proxy API calls through Next.js API routes, keeping API keys and server logic off the client.
-*   **API Design (Good):** API routes (`app/api/.../route.ts`) consistently return JSON and use a standardized `AppError` for structured error responses, accompanied by appropriate HTTP status codes. The propagation of a unique `X-Request-ID` via `middleware.ts` and `logger.ts` is an excellent practice for request tracing and debugging.
-*   **Data Flow (Good):** State management in `app/dashboard/page.tsx` is clear. Data fetching is encapsulated in dedicated client-side services, which then interact with the server-side API routes.
-*   **External Service Integrations (Good):** Integrations with Clerk, Stripe, Gemini AI, and GitHub are implemented logically and with attention to security (e.g., proxied AI calls, webhook verification for Stripe).
-
-### 2. Security
-
-*   **Authentication & Authorization (Excellent):** Clerk is robustly integrated for user authentication across all protected routes. Role-based access (via `user?.publicMetadata?.plan`) is correctly implemented for features like the "Upgrade" button.
-*   **Input Validation & Sanitization (Outstanding):** The `app/utils/security.ts` module provides comprehensive input validation (e.g., `validateCodeInput`, `validateCustomPrompt`, `validateRepoUrl`) and sanitization (`sanitizeInput`, `sanitizeForAIPrompt`). This is paramount for preventing prompt injection attacks against the AI, XSS, and DoS attacks.
-*   **Sensitive File Filtering (Excellent):** The `filterSensitiveFiles` function (`app/utils/security.ts`) and the `LocalFolderWarningModal.tsx` are critical security features, preventing sensitive files (e.g., `.env`, private keys) from being inadvertently uploaded to the AI, especially when dealing with local file system access.
-*   **Environment Variable Management (Good):** `app/config/env.ts` correctly separates client-side public and server-side secret environment variables and includes validation checks, enhancing security and deployment reliability.
-
-### 3. Performance & Resilience
-
-*   **Rate Limiting (Excellent):** Distributed rate limiting using Redis (`app/utils/redis.ts`) is implemented for AI review endpoints, correctly differentiating between single-file and repository reviews. This is crucial for protecting against abuse and managing AI costs.
-*   **Circuit Breaker (Outstanding):** The inclusion of a circuit breaker pattern within the Redis rate limiter (`app/utils/redis.ts`) is a sophisticated and highly valuable feature. It enhances system resilience by preventing cascading failures when Redis itself is experiencing issues, allowing the application to "fail open" or "fail closed" gracefully.
-*   **Retry Mechanisms (Good):** `fetchWithRetry` in `app/services/clientGeminiService.ts` adds resilience against transient network and API errors by implementing exponential backoff.
-*   **History Queue (Good):** The `app/utils/historyQueue.ts` demonstrates a thoughtful approach to non-critical operations (saving history), ensuring that temporary database unavailability doesn't block the main user workflow, retrying in the background.
-
-### 4. Maintainability & Readability
-
-*   **Code Style & Consistency (Good):** The codebase maintains a consistent style, uses TypeScript effectively, and leverages modern React and Next.js features.
-*   **Error Handling (Good):** The custom `AppError` class (`app/types/errors.ts`) provides a structured and type-safe way to handle and communicate errors throughout the application, from server to client.
-*   **Prompts Management (Good):** Centralizing AI prompt instructions in `app/data/prompts.ts` allows for easy modification and versioning of AI behavior.
-*   **Clear Component Logic (Good):** UI components like `CodeInput.tsx` and `FeedbackDisplay.tsx` are complex but well-organized, handling various input sources and display modes.
+Here's a holistic review of the codebase, focusing on high-level feedback, architectural patterns, cross-file issues, and overall code quality.
 
 ---
 
-## Areas for Improvement & Specific Recommendations
+## **Holistic Review: CodeRevAI**
 
-### 1. Critical: Missing Test Coverage
+### 1. **Overall Architecture and Design Patterns**
 
-*   **Issue:** While `vitest.config.ts` and `vitest.setup.ts` are present, indicating an intent for testing, there are no actual test files (`.test.ts` or `.spec.ts`) provided in the manifest. This is the most significant gap.
-*   **Impact:** Lack of tests makes refactoring risky, increases the likelihood of regressions, and makes it harder to verify the correctness of complex logic (e.g., rate limiting, circuit breaker, input validation, Stripe webhook processing).
-*   **Recommendation:** Implement comprehensive unit and integration tests for critical logic:
-    *   **API routes:** Ensure correct authentication, input validation, AI integration, and error handling.
-    *   **Utility functions:** `security.ts`, `redis.ts`, `githubUtils.ts`, `markdown.ts`.
-    *   **Services:** `clientGeminiService.ts`, `clientHistoryService.ts`, `historyServiceDB.ts`, `githubService.ts`, `localFileService.ts`.
-    *   **Complex UI logic:** `CodeInput.tsx`, `ReviewModeSelector.tsx`.
-*   **Snippet Example (Conceptual - for `app/utils/security.ts`):**
+The application employs a well-structured layered architecture typical for a Next.js full-stack application.
+*   **Client-Side (UI):** `app/components/` for reusable UI elements and `app/dashboard/page.tsx` as the main application orchestrator.
+*   **Client-Side Services:** `app/services/clientGeminiService.ts`, `app/services/clientHistoryService.ts` abstract API calls for the frontend.
+*   **API Routes (Backend-for-Frontend):** `app/api/` contains Next.js API routes that act as a secure proxy to external services and internal databases.
+*   **Backend Services:** `app/services/githubService.ts`, `app/services/historyServiceDB.ts`, `app/services/localFileService.ts`, and direct interactions with Prisma, Stripe, Gemini, and Redis.
+*   **Utilities & Configuration:** `app/utils/`, `app/config/env.ts`, `app/types/`.
+
+This modular approach significantly enhances maintainability, scalability, and testability.
+
+**Strengths:**
+*   **Layered Separation:** Clear distinction between UI, API, and backend logic, which is crucial for large applications.
+*   **Centralized Configuration (`app/config/env.ts`):** Environment variables are type-safe and validated at runtime on the server, preventing common deployment-time errors.
+*   **Standardized Error Handling (`app/types/errors.ts`):** The `AppError` class and `createErrorResponse` utility ensure a consistent error format across all API responses, simplifying client-side error management.
+*   **Centralized Logging (`app/utils/logger.ts`):** Consistent use of a custom logger throughout server-side code provides excellent observability.
+*   **Request Tracing (`middleware.ts`):** Injecting `X-Request-ID` into requests and responses is a critical practice for debugging and tracing issues across multiple services in production.
+*   **Asynchronous Processing (`app/utils/historyQueue.ts`):** Using a Redis-backed queue for non-critical history writes improves application resilience, allowing core review functionality to succeed even if the database is temporarily unavailable.
+*   **Client-Side Retries (`app/services/clientGeminiService.ts`):** The `fetchWithRetry` mechanism enhances resilience against transient network failures for API calls.
+
+**Areas for Improvement:**
+*   **Client-Side Global Error Handling:** While `Notification.tsx` handles specific errors, implementing a React Error Boundary at a higher level could catch unhandled component-level errors, providing a graceful fallback UI instead of crashing the application. This enhances user experience.
+
+### 2. **Security Considerations**
+
+The codebase demonstrates a strong commitment to security, addressing critical vectors for AI-powered applications.
+
+**Strengths:**
+*   **Authentication & Authorization:** All sensitive API routes correctly enforce user authentication via Clerk.
+*   **Input Sanitization (`app/utils/security.ts`):** `sanitizeInput` and `sanitizeForAIPrompt` are robustly used across AI-interacting API routes (`review-code`, `review-repo`, `generate-diff`). This is vital for preventing prompt injection and data leakage.
+*   **Sensitive File Filtering (`app/utils/security.ts`):** The `filterSensitiveFiles` function is used during local folder and GitHub repository imports, preventing sensitive data like `.env` files, `.bak` files, and private keys from being sent to the AI. This is a crucial protective measure.
+*   **Rate Limiting (`app/utils/redis.ts`):** A sophisticated Redis-backed rate limiting mechanism with circuit breaker functionality is implemented and applied to resource-intensive AI API calls. This protects against abuse and controls operational costs.
+*   **Stripe Webhook Verification (`app/api/webhooks/stripe/route.ts`):** Correctly verifies incoming Stripe webhook signatures, preventing fraudulent events.
+*   **Environment Variable Management:** Strict separation and validation of public vs. server-only environment variables in `app/config/env.ts`.
+*   **Local File Access Warning (`app/components/LocalFolderWarningModal.tsx`):** A clear and user-friendly warning is presented before allowing local folder access, educating users about the risks of sharing sensitive data.
+
+**Areas for Improvement:**
+*   **Comprehensive `filterSensitiveFiles`:** While the concept is excellent, the specific implementation of `filterSensitiveFiles` (not provided in the manifest) should be rigorously audited to ensure it covers all common sensitive file types (e.g., cloud credentials, database connection files, SSH keys, private certificates, build artifacts that might contain secrets). Consider a `.gitignore`-like pattern matching system for maximum flexibility.
+*   **Large File Memory Handling (Client-side):** In `app/services/localFileService.ts`, the `readFileAsText` function reads entire files into memory. For the `LOCAL_FILE_MAX` of 212MB, this could potentially strain client browser memory if multiple large files are selected simultaneously, even if within the overall limit. Processing files one by one or implementing a streaming approach for very large individual files could mitigate this for future scalability.
+
+### 3. **Performance and Scalability**
+
+The application makes conscious design decisions to support performance and scalability.
+
+**Strengths:**
+*   **Rate Limiting with Circuit Breaker:** Critical for managing load and protecting expensive AI services. The circuit breaker is a great resilience pattern.
+*   **Optimized AI Model:** Using `gemini-2.5-flash` indicates a preference for speed in AI responses, improving user experience.
+*   **Asynchronous History Writes:** The `historyQueue` prevents non-critical writes from impacting the latency of core user interactions.
+*   **`output: 'standalone'` (`next.config.js`):** Enables optimized Docker deployments, leading to smaller image sizes and faster startup times.
+*   **Database Query Optimization:** `getHistoryFromDB` in `app/services/historyServiceDB.ts` uses `take: 50` to limit the number of history items fetched, preventing overly large database queries for history.
+
+**Areas for Improvement:**
+*   **AI Context Window Management (Repo Reviews):** For repository reviews (`app/api/review-repo/route.ts`), concatenating all file contents into a single prompt for the AI can lead to very long token counts, potentially impacting latency and cost even with Gemini's large context window.
+    *   **Suggestion:** For extremely large repositories, explore advanced AI interaction patterns such as:
+        *   **Multi-stage Summarization:** Initial AI calls summarize sub-sections, and a final call reviews the summaries.
+        *   **Targeted Review:** Allow users to specify key files or directories for deeper analysis within a repo, limiting the immediate AI context.
+        *   **Token Count Estimation:** Implement client-side or server-side estimation of token count *before* sending to the AI, providing early feedback to the user if the input is too large.
+*   **Client-Side Data Fetching:** `getHistory()` in `app/dashboard/page.tsx` is called on every mount. For very active users, this could lead to redundant fetches.
+    *   **Suggestion:** Consider implementing client-side caching (e.g., using `localStorage` or a library like `react-query`/`SWR`) for history data to reduce redundant network calls.
+
+### 4. **Code Quality and Maintainability**
+
+The codebase generally adheres to high code quality standards.
+
+**Strengths:**
+*   **TypeScript Consistency:** Ubiquitous use of TypeScript throughout the project greatly improves type safety, developer experience, and reduces runtime errors.
+*   **Modular Component Design:** UI components are well-isolated, with clear props and responsibilities, promoting reusability and easier debugging.
+*   **Centralized Constants and Prompts (`app/data/constants.ts`, `app/data/prompts.ts`):** Prevents magic strings/numbers and simplifies management of configurable data and AI prompts.
+*   **Descriptive Naming:** Clear and meaningful names for variables, functions, and files enhance code readability.
+*   **Accessibility (A11y):** Components like `ReviewModeSelector.tsx` and `Header.tsx` proactively include ARIA attributes and keyboard navigation support, which is excellent for inclusivity.
+*   **User-Friendly Error Messages (`app/components/ErrorMessage.tsx`):** Provides actionable advice and context-specific solutions, significantly improving the user experience during errors.
+*   **Comprehensive Testing Setup:** Vitest with `@testing-library/react` and extensive mocking in `vitest.setup.ts` demonstrates a strong commitment to code correctness. `app/api/review-code/route.test.ts` is a good example of thorough API testing.
+
+**Areas for Improvement:**
+*   **Consistent Language Fallback for Pasted Code:** In `app/components/CodeInput.tsx` (around line 200), the default language for pasted code, when auto-detect is enabled and no file is selected, currently falls back to `'typescript'`.
+    *   **Suggestion:** Change this fallback to `'plaintext'` (or `'text'`) for better semantic accuracy if no detection occurs. This would also necessitate a minor adjustment to `app/data/constants.ts` to include `'plaintext'` as a supported language and potentially an update to `app/data/prompts.ts` to guide the AI on how to handle "plaintext" reviews.
+    *   **File:** `app/components/CodeInput.tsx`
+    *   **Original (Line 200):**
+        ```typescript
+        // ...
+        const languageToUse = languageOverride !== 'auto-detect'
+          ? languageOverride
+          : selectedFile?.language.value || 'typescript'; // Fallback for pasted code
+        // ...
+        ```
+    *   **Proposed Change:**
+        ```typescript
+        // app/components/CodeInput.tsx
+        // ...
+        const languageToUse = languageOverride !== 'auto-detect'
+          ? languageOverride
+          : selectedFile?.language.value || 'plaintext'; // Changed to 'plaintext'
+        // ...
+        ```
+    *   **File:** `app/data/constants.ts` (Add this if not already present in `LANGUAGES`)
+        ```typescript
+        // app/data/constants.ts
+        export const LANGUAGES: Language[] = [
+          // ... existing languages
+          { value: 'plaintext', label: 'Plain Text', extensions: ['.txt'] },
+        ];
+        ```
+*   **Centralized Error Code to UI Context Mapping:** The `dashboard/page.tsx` contains `switch` statements mapping API error codes (`ErrorCode`) to `ErrorMessage` contexts. This logic could be centralized into a utility function (e.g., `app/utils/errorUtils.ts`) to avoid duplication and improve maintainability.
+    *   **File:** `app/dashboard/page.tsx` (similar logic in `handleReview` and `handleRepoReview` functions)
+    *   **Original (Lines 98-114):**
+        ```typescript
+        // ...
+              switch (apiError.code) {
+                case 'RATE_LIMIT_EXCEEDED': context = 'rate-limit'; break;
+                case 'UNAUTHORIZED': context = 'auth'; break;
+                case 'FILE_TOO_LARGE': case 'INVALID_INPUT': context = 'file'; break;
+                case 'AI_SERVICE_ERROR': case 'SERVICE_UNAVAILABLE': case 'INTERNAL_ERROR': context = 'network'; break;
+                default: context = 'review';
+              }
+        // ...
+        ```
+    *   **Proposed Change:**
+        *   **File:** `app/utils/errorUtils.ts` (New file)
+            ```typescript
+            // app/utils/errorUtils.ts
+            import { ErrorCode } from '@/app/types/errors';
+
+            export type ErrorMessageContext = 'review' | 'diff' | 'file' | 'network' | 'auth' | 'rate-limit';
+
+            export function mapErrorCodeToErrorMessageContext(code: ErrorCode): ErrorMessageContext {
+              switch (code) {
+                case 'RATE_LIMIT_EXCEEDED': return 'rate-limit';
+                case 'UNAUTHORIZED': return 'auth';
+                case 'FILE_TOO_LARGE':
+                case 'REPO_TOO_LARGE':
+                case 'INVALID_INPUT':
+                case 'VALIDATION_ERROR': return 'file';
+                case 'AI_SERVICE_ERROR':
+                case 'SERVICE_UNAVAILABLE':
+                case 'GITHUB_API_ERROR':
+                case 'DATABASE_ERROR':
+                case 'PAYMENT_ERROR':
+                case 'INTERNAL_ERROR': return 'network';
+                default: return 'review';
+              }
+            }
+            ```
+        *   **File:** `app/dashboard/page.tsx` (Import and use the new utility)
+            ```typescript
+            // ...
+            import { mapErrorCodeToErrorMessageContext, ErrorMessageContext } from '@/app/utils/errorUtils';
+
+            export default function HomePage() {
+              // ...
+              const [errorContext, setErrorContext] = useState<ErrorMessageContext | undefined>(undefined);
+              // ...
+              const handleReview = useCallback(async (codeToReview: string, language: string, prompt: string) => {
+                // ...
+                try { /* ... */ } catch (e) {
+                  // ...
+                  if (e && typeof e === 'object' && 'code' in e) {
+                    const apiError = e as ApiError;
+                    errorMessage = apiError.message;
+                    context = mapErrorCodeToErrorMessageContext(apiError.code);
+                  }
+                  // ...
+                }
+              }, [selectedFile, reviewMode]);
+              // ... similar update for handleRepoReview
+            }
+            ```
+*   **Modal Focus Trapping:** For `CodePasteModal` and `HistoryPanel`, ensure focus is trapped within the modal when open and returns to the triggering element when closed. This is a critical accessibility enhancement.
+    *   **File:** `app/components/CodeInput.tsx` (for `CodePasteModal`) & `app/components/HistoryPanel.tsx`
+    *   **Suggestion:** Implement `useEffect` hooks to add/remove `keydown` listeners for `Tab` key, and `useRef` to manage focusable elements within the modal/panel. Additionally, add `aria-labelledby` to associate the modal title with the modal element. (See detailed recommendations below for implementation example).
+*   **Richer Test Coverage for Utilities and API Routes:** While testing exists, expand coverage for all API routes (e.g., `generate-diff`, `history`, `webhooks`) and critical utility functions (e.g., `app/utils/security.ts`, `app/utils/redis.ts`, `app/utils/stripeUtils.ts`). Explicit unit tests for these modules would guarantee their individual correctness and robustness.
+
+### 5. **Prompts and AI Interaction**
+
+The prompt engineering is thoughtful and aims for high-quality, structured output.
+
+**Strengths:**
+*   **Centralized Prompts (`app/data/prompts.ts`):** Easy management and iteration on AI instructions.
+*   **Dynamic Prompt Construction:** `buildPrompt` functions (e.g., in `app/api/review-code/route.ts`) combine base instructions with selected review modes and custom user prompts, providing flexible AI interaction.
+*   **Structured Output Directives:** Prompts explicitly ask for Markdown, code blocks, and line numbers, guiding the AI to produce useful, parsable feedback.
+*   **Defensive `cleanMarkdownFences` (`app/api/generate-diff/route.ts`):** This utility is a good proactive measure to clean AI output, assuming the AI might occasionally fail to adhere to "return ONLY raw code" instructions.
+
+**Areas for Improvement:**
+*   **AI Model Adherence to "ONLY RAW CODE" for Diff:** The `generate-diff` prompt is very strict. While `cleanMarkdownFences` helps, continued monitoring of AI behavior to ensure it consistently provides raw code (and not, e.g., explanations with comments) is important for the diff feature's reliability.
+
+### 6. **Detailed Recommendations with Code Snippets**
+
+#### 6.1. **Centralize `ErrorCode` to `ErrorMessage` Context Mapping**
+
+To improve consistency and maintainability, centralize the mapping logic used in `dashboard/page.tsx`.
+
+*   **File:** `app/utils/errorUtils.ts` (New file)
     ```typescript
-    // FILE: app/utils/security.test.ts (new file)
-    // Line #1 - 10
-    import { validateCodeInput, isSensitiveFile } from '@/app/utils/security';
-    import { FILE_SIZE_LIMITS } from '@/app/data/constants';
+    // app/utils/errorUtils.ts
+    import { ErrorCode } from '@/app/types/errors';
 
-    describe('security utilities', () => {
-      it('validateCodeInput should reject empty or too short code', () => {
-        expect(validateCodeInput('').valid).toBe(false);
-        expect(validateCodeInput('a').valid).toBe(false);
-        expect(validateCodeInput('a'.repeat(9)).valid).toBe(false);
-      });
+    export type ErrorMessageContext = 'review' | 'diff' | 'file' | 'network' | 'auth' | 'rate-limit';
 
-      it('validateCodeInput should reject code exceeding max length', () => {
-        const tooLongCode = 'a'.repeat(FILE_SIZE_LIMITS.SINGLE_CODE_INPUT_MAX + 1);
-        expect(validateCodeInput(tooLongCode).valid).toBe(false);
-        expect(validateCodeInput(tooLongCode).error).toContain('exceeds maximum size');
-      });
-
-      it('isSensitiveFile should detect .env files', () => {
-        expect(isSensitiveFile('/project/.env')).toBe(true);
-        expect(isSensitiveFile('src/components/.env.local')).toBe(true);
-        expect(isSensitiveFile('Dockerfile')).toBe(false);
-      });
-    });
-    ```
-
-### 2. High: Inconsistent Logging Practices
-
-*   **Issue:** While `app/utils/logger.ts` provides a structured logging utility, `console.log` and `console.error` are still used directly in several critical files, particularly in `app/api/webhooks/stripe/route.ts` and `app/services/historyServiceDB.ts`.
-*   **Impact:** Inconsistent logging makes it harder to manage logs, apply filters, and control verbosity in different environments. Direct `console.log` in `app/api/webhooks/stripe/route.ts` also prints sensitive IDs, which is a security concern in production.
-*   **Recommendation:** Standardize on `app/utils/logger.ts` for all logging (`logger.info`, `logger.warn`, `logger.error`, `logger.debug`) across the entire codebase. Ensure `logger.ts` handles sensitive data masking if needed, especially in production.
-*   **File:** `app/api/webhooks/stripe/route.ts`
-*   **Snippet Example (for `app/api/webhooks/stripe/route.ts` line #50):**
-    ```typescript
-    // app/api/webhooks/stripe/route.ts (modified)
-    // Line #50 (originally `console.log('Checkout session completed:', session.id);`)
-    // Before: console.log('Checkout session completed:', session.id);
-    logger.info('Checkout session completed', { sessionId: session.id, userId, plan });
-    // Line #70 (originally `console.log(`Subscription created for user ${userId}`);`)
-    // Before: console.log(`Subscription created for user ${userId}`);
-    logger.info('Subscription created', { userId, subscriptionId: session.subscription });
-    ```
-*   **File:** `app/services/historyServiceDB.ts`
-*   **Snippet Example (for `app/services/historyServiceDB.ts` line #29):**
-    ```typescript
-    // app/services/historyServiceDB.ts (modified)
-    // Line #29 (originally `console.error('Error fetching history from database:', error);`)
-    // Before: console.error('Error fetching history from database:', error);
-    logger.error('Error fetching history from database', error);
-    ```
-
-### 3. Medium: Consolidate File/Input Size Limits
-
-*   **Issue:** Size limits are defined in two places: `app/data/constants.ts` (`FILE_SIZE_LIMITS`) and `app/utils/security.ts` (`GLOBAL_INPUT_SANITY_LIMIT`, `MAX_CODE_LENGTH`). Additionally, `app/api/generate-diff/route.ts` hardcodes a `feedback.length > 50000` check.
-*   **Impact:** This inconsistency can lead to confusion, duplicated logic, and makes it harder to manage or update limits globally.
-*   **Recommendation:** Centralize all file and input size limits into `app/data/constants.ts` to create a single source of truth. Then, reference these constants in `app/utils/security.ts` and API routes.
-*   **File:** `app/data/constants.ts`
-*   **File:** `app/utils/security.ts`
-*   **File:** `app/api/generate-diff/route.ts`
-*   **Snippet Example (for `app/data/constants.ts`):**
-    ```typescript
-    // app/data/constants.ts (modified)
-    // Line #50
-    export const INPUT_LIMITS = {
-      GLOBAL_TEXT_INPUT_MAX: 50 * 1024, // 50KB for general text inputs like prompts, metadata
-      SINGLE_CODE_REVIEW_MAX: 100 * 1024, // 100KB for single code file input (was MAX_CODE_LENGTH)
-      DIFF_FEEDBACK_MAX: 50 * 1024, // 50KB for feedback sent to generate-diff API
-    } as const;
-
-    export const FILE_SIZE_LIMITS = {
-      LOCAL_FILE_MAX: 1024 * 1024, // 1MB for individual local files
-      REPO_TOTAL_MAX: 200 * 1024,  // 200KB total for repository reviews
-      // Note: SINGLE_CODE_INPUT_MAX is now INPUT_LIMITS.SINGLE_CODE_REVIEW_MAX
-      WARNING_THRESHOLD: 100 * 1024, // 100KB
-    } as const;
-    ```
-*   **Snippet Example (for `app/utils/security.ts` line #36 and #10):**
-    ```typescript
-    // app/utils/security.ts (modified)
-    // Line #6
-    import { FILE_SIZE_LIMITS, INPUT_LIMITS } from '@/app/data/constants';
-
-    // Line #10 (originally GLOBAL_INPUT_SANITY_LIMIT)
-    // if (sanitized.length > GLOBAL_INPUT_SANITY_LIMIT) {
-    if (sanitized.length > INPUT_LIMITS.GLOBAL_TEXT_INPUT_MAX) {
-      sanitized = sanitized.substring(0, INPUT_LIMITS.GLOBAL_TEXT_INPUT_MAX);
-    }
-    // Line #36 (originally MAX_CODE_LENGTH)
-    // if (code.length > MAX_CODE_LENGTH) {
-    if (code.length > INPUT_LIMITS.SINGLE_CODE_REVIEW_MAX) {
-      return { valid: false, error: `Code exceeds maximum size of ${INPUT_LIMITS.SINGLE_CODE_REVIEW_MAX / 1024}KB` };
-    }
-    ```
-*   **Snippet Example (for `app/api/generate-diff/route.ts` line #60):**
-    ```typescript
-    // app/api/generate-diff/route.ts (modified)
-    // Line #60
-    import { INPUT_LIMITS } from '@/app/data/constants';
-
-    // Before: if (feedback.length > 50000) {
-    if (feedback.length > INPUT_LIMITS.DIFF_FEEDBACK_MAX) {
-      return NextResponse.json(
-        { error: `Feedback is too large (max ${INPUT_LIMITS.DIFF_FEEDBACK_MAX / 1000}KB)` },
-        { status: 400 }
-      );
-    }
-    ```
-
-### 4. Medium: Refine `AppError` and Error Context Mapping
-
-*   **Issue:** The error handling in `app/dashboard/page.tsx` (`handleReview`, `handleRepoReview`) involves a `switch` statement to map `AppError` codes to display contexts for `ErrorMessage.tsx`. This logic is duplicated and slightly verbose. Also, the type assertion `e as ApiError` is unnecessary since `clientGeminiService.ts` and `clientHistoryService.ts` guarantee throwing `AppError` instances.
-*   **Impact:** Duplicated logic and potential for inconsistencies if new error codes or contexts are added.
-*   **Recommendation:** Create a helper function to centralize the mapping from `ErrorCode` to `errorContext` and simplify the `catch` blocks in `app/dashboard/page.tsx`.
-*   **File:** `app/dashboard/page.tsx`
-*   **Snippet Example (for `app/dashboard/page.tsx`):**
-    ```typescript
-    // app/dashboard/page.tsx (modified)
-
-    // Add this helper function outside the component, perhaps in `app/utils/errorHelpers.ts`
-    // Line #10 (or new file `app/utils/errorHelpers.ts`)
-    import { AppError, ErrorCode } from '@/app/types/errors';
-
-    type ErrorContext = 'review' | 'diff' | 'file' | 'network' | 'auth' | 'rate-limit' | undefined;
-
-    const mapAppErrorCodeToContext = (code: ErrorCode): ErrorContext => {
+    /**
+     * Maps an API ErrorCode to a display context for the ErrorMessage component.
+     */
+    export function mapErrorCodeToErrorMessageContext(code: ErrorCode): ErrorMessageContext {
       switch (code) {
         case 'RATE_LIMIT_EXCEEDED': return 'rate-limit';
         case 'UNAUTHORIZED': return 'auth';
         case 'FILE_TOO_LARGE':
         case 'REPO_TOO_LARGE':
         case 'INVALID_INPUT':
-          return 'file';
+        case 'VALIDATION_ERROR': return 'file'; // General context for input/data issues
         case 'AI_SERVICE_ERROR':
+        case 'SERVICE_UNAVAILABLE':
         case 'GITHUB_API_ERROR':
         case 'DATABASE_ERROR':
         case 'PAYMENT_ERROR':
-        case 'SERVICE_UNAVAILABLE':
-        case 'INTERNAL_ERROR':
-          return 'network';
-        case 'VALIDATION_ERROR':
-        case 'NOT_FOUND': // Although not currently used in the API errors
-        default:
-          return 'review';
+        case 'INTERNAL_ERROR': return 'network'; // Backend/service related issues
+        case 'NOT_FOUND': return 'file'; // Resource not found
+        default: return 'review'; // Default
       }
-    };
-
-    // In handleReview (similar for handleRepoReview), starting at line #95:
-    // Before: if (e && typeof e === 'object' && 'code' in e) { ... }
-    // After:
-    } catch (e) {
-      if (e instanceof AppError) {
-        setError(`Failed to get review: ${e.message}`);
-        setErrorContext(mapAppErrorCodeToContext(e.code));
-        logger.error('Review error (AppError):', { code: e.code, message: e.message, details: e.details });
-      } else if (e instanceof Error) {
-        setError(`Failed to get review: ${e.message}`);
-        setErrorContext('network'); // Generic for unexpected network/JS errors
-        logger.error('Review error (JS Error):', e);
-      } else {
-        setError('Failed to get review: An unknown error occurred.');
-        setErrorContext('review');
-        logger.error('Review error (Unknown type):', e);
-      }
-    } finally {
-      setIsLoading(false);
     }
     ```
-
-### 5. Minor: Accessibility Improvements (A11y)
-
-*   **Issue:** Several interactive UI elements, particularly buttons that only contain icons or rely solely on visual text, lack explicit accessibility attributes.
-*   **Impact:** Users relying on screen readers or keyboard navigation may have difficulty understanding the purpose of these elements.
-*   **Recommendation:** Add `aria-label` or link with `aria-labelledby` to ensure all interactive elements convey their purpose semantically.
-*   **File:** `app/components/Header.tsx`
-*   **Snippet Example (for `app/components/Header.tsx` line #52 and #75):**
+*   **File:** `app/dashboard/page.tsx` (Refactor `handleReview` and `handleRepoReview`)
     ```typescript
-    // app/components/Header.tsx (modified)
-    // Line #52 (button around HistoryIcon)
-    <button
-        onClick={onToggleHistory}
-        className="p-2 rounded-full hover:bg-gray-700 transition-colors"
-        aria-label="View history" // Added aria-label
-    >
-        <HistoryIcon />
-    </button>
+    // app/dashboard/page.tsx
+    import { mapErrorCodeToErrorMessageContext, ErrorMessageContext } from '@/app/utils/errorUtils';
+    // ... other imports
 
-    // Line #75 (button for SignInButton)
-    <SignInButton mode="modal">
-        <button
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white font-semibold transition-colors"
-            aria-label="Sign in to your account" // Added aria-label
-        >
-            Sign In
-        </button>
-    </SignInButton>
-    ```
+    export default function HomePage() {
+      // ...
+      const [errorContext, setErrorContext] = useState<ErrorMessageContext | undefined>(undefined);
+      // ...
 
-### 6. Minor: Enhance `fetchWithRetry` for API Error Handling
+      const handleReview = useCallback(async (codeToReview: string, language: string, prompt: string) => {
+        // ...
+        try { /* ... */ } catch (e) {
+          let errorMessage = 'An unknown error occurred.';
+          let context: ErrorMessageContext = 'review'; // Default context
 
-*   **Issue:** The pattern `if (!response.ok) { await handleApiError(response); }` is repeated in `clientGeminiService.ts` and `clientHistoryService.ts`.
-*   **Impact:** Slight code duplication.
-*   **Recommendation:** Integrate the `handleApiError` call directly into `fetchWithRetry` when `!response.ok` and no retries are left, or if the status code indicates a client error (e.g., 4xx) that shouldn't be retried.
-*   **File:** `app/services/clientGeminiService.ts` (and `clientHistoryService.ts`)
-*   **Snippet Example (for `app/services/clientGeminiService.ts` line #26):**
-    ```typescript
-    // app/services/clientGeminiService.ts (modified)
-    // Line #26
-    async function fetchWithRetry(
-      url: string,
-      options: RequestInit,
-      retries: number = 3,
-      delay: number = 1000
-    ): Promise<Response> {
-      try {
-        const response = await fetch(url, options);
-
-        if (!response.ok) {
-          // If it's a server error (5xx) AND retries are remaining, then retry.
-          // Otherwise (e.g., client error 4xx, or no retries left), throw a structured AppError.
-          if (response.status >= 500 && retries > 0) {
-            logger.warn(`Retrying ${url} due to ${response.status} status. Retries left: ${retries}`);
-            await new Promise(res => setTimeout(res, delay));
-            return fetchWithRetry(url, options, retries - 1, delay * 2);
+          if (e && typeof e === 'object' && 'code' in e) {
+            const apiError = e as ApiError;
+            errorMessage = apiError.message;
+            context = mapErrorCodeToErrorMessageContext(apiError.code); // Use the new utility
+          } else if (e instanceof Error) {
+            errorMessage = e.message;
+            context = 'review';
           }
-          // If we reach here, either it's a non-retryable error (e.g., 4xx) or max retries reached.
-          // Process it as an API error and throw.
-          await handleApiError(response);
-        }
 
-        return response; // If response is OK, or if handleApiError threw, this is reached
-      } catch (error) {
-        // Only retry if it's a network error and not already a structured AppError from handleApiError
-        if (retries > 0 && !(error instanceof AppError)) {
-          logger.warn(`Retrying ${url} due to network error. Retries left: ${retries}`, error);
-          await new Promise(res => setTimeout(res, delay));
-          return fetchWithRetry(url, options, retries - 1, delay * 2);
+          setError(`Failed to get review: ${errorMessage}`);
+          setErrorContext(context);
+          logger.error('Review error:', e);
+        } finally {
+          setIsLoading(false);
         }
-        throw error; // Re-throw the original error (which could be an AppError from handleApiError)
-      }
+      }, [selectedFile, reviewMode]);
+
+      // ... similar update for handleRepoReview
     }
-
-    // Now, in `reviewCode`, `reviewRepository`, `generateFullCodeFromReview`, the `if (!response.ok)` block can be removed.
-    // Example for `reviewCode` (line #67):
-    // const response = await fetchWithRetry('/api/review-code', { /* ... */ });
-    // // No `if (!response.ok)` needed here. fetchWithRetry handles it.
-    // const data = await response.json();
-    // return data.feedback || '';
     ```
 
-### 7. Minor: Stripe Webhook Plan Logic
+#### 6.2. **Implement Focus Trapping for Modals (`CodePasteModal`, `HistoryPanel`)**
 
-*   **Issue:** In `app/api/webhooks/stripe/route.ts`, for `customer.subscription.created` and `customer.subscription.updated` events, the plan is inferred from `subscription.status === 'active' ? 'pro' : 'free'`. This might not always accurately reflect the purchased plan if Stripe introduces more statuses or if a subscription is `pending` or `trialing`. The `checkout.session.completed` event correctly uses `session.metadata?.plan`.
-*   **Impact:** Potential for miscategorizing user plans if Stripe's status mapping isn't exact for future scenarios.
-*   **Recommendation:** For `customer.subscription.created` and `customer.subscription.updated`, aim to retrieve the `product` or `price` ID from the subscription object (e.g., `subscription.items.data[0].price.product`) and map that to your internal plan names. This makes the plan determination more robust and less reliant on generic status strings.
+Enhance accessibility by trapping keyboard focus within open modals.
 
-## Conclusion
+*   **File:** `app/components/CodeInput.tsx` (Inside `CodePasteModal` component definition)
+    ```typescript
+    // app/components/CodeInput.tsx
+    import React, { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
+    // ... other imports
 
-CodeRevAI is a well-engineered application with significant strengths in its architecture, security, and resilience features. The use of modern frameworks and thoughtful utility implementations (like the Redis rate limiter with a circuit breaker and the history queue) stand out. Addressing the lack of comprehensive tests is the most critical next step, followed by refining logging and error handling for even greater robustness and maintainability. Implementing these recommendations will further solidify the project's quality and ensure its long-term success.
+    const CodePasteModal: React.FC<CodePasteModalProps> = ({ isOpen, onClose, onConfirm, initialCode }) => {
+      const [code, setCode] = useState(initialCode);
+      const modalRef = useRef<HTMLDivElement>(null); // Ref for modal content
+
+      useEffect(() => {
+        if (isOpen) {
+          setCode(initialCode);
+          // Focus first interactive element when modal opens
+          const focusableElements = modalRef.current?.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements && focusableElements.length > 0) {
+            (focusableElements[0] as HTMLElement).focus();
+          }
+        }
+      }, [isOpen, initialCode]);
+
+      const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        if (!isOpen || !modalRef.current || e.key !== 'Tab') return;
+
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusableElement = focusableElements[0] as HTMLElement;
+        const lastFocusableElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) { // Shift + Tab
+          if (document.activeElement === firstFocusableElement) {
+            lastFocusableElement.focus();
+            e.preventDefault();
+          }
+        } else { // Tab
+          if (document.activeElement === lastFocusableElement) {
+            firstFocusableElement.focus();
+            e.preventDefault();
+          }
+        }
+      }, [isOpen]);
+
+      useEffect(() => {
+        if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+        } else {
+          document.removeEventListener('keydown', handleKeyDown);
+        }
+        return () => document.removeEventListener('keydown', handleKeyDown);
+      }, [isOpen, handleKeyDown]);
+
+      if (!isOpen) return null;
+
+      const handleConfirm = () => onConfirm(code);
+
+      return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose} aria-modal="true" role="dialog">
+          <div
+            className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-4/5 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+            ref={modalRef} // Attach ref here
+            aria-labelledby="paste-modal-title" // Link to the modal title
+          >
+            <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+              <h2 className="text-lg font-semibold" id="paste-modal-title">Paste Code</h2> {/* Add ID here */}
+              <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-700" aria-label="Close modal">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            {/* ... rest of the modal content */}
+          </div>
+        </div>
+      );
+    };
+    ```
+*   **File:** `app/components/HistoryPanel.tsx`
+    ```typescript
+    // app/components/HistoryPanel.tsx
+    import React, { useEffect, useRef, useCallback } from 'react'; // Added useEffect, useRef, useCallback
+    // ... other imports
+
+    export const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onSelect, onClear }) => {
+      const panelRef = useRef<HTMLDivElement>(null); // Ref for panel content
+
+      const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        if (!isOpen || !panelRef.current || e.key !== 'Tab') return;
+
+        const focusableElements = panelRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusableElement = focusableElements[0] as HTMLElement;
+        const lastFocusableElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey) { // Shift + Tab
+          if (document.activeElement === firstFocusableElement) {
+            lastFocusableElement.focus();
+            e.preventDefault();
+          }
+        } else { // Tab
+          if (document.activeElement === lastFocusableElement) {
+            firstFocusableElement.focus();
+            e.preventDefault();
+          }
+        }
+      }, [isOpen]);
+
+      useEffect(() => {
+        if (isOpen) {
+          document.addEventListener('keydown', handleKeyDown);
+          // Focus first interactive element when panel opens
+          const focusableElements = panelRef.current?.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements && focusableElements.length > 0) {
+            (focusableElements[0] as HTMLElement).focus();
+          }
+        } else {
+          document.removeEventListener('keydown', handleKeyDown);
+        }
+        return () => document.removeEventListener('keydown', handleKeyDown);
+      }, [isOpen, handleKeyDown]);
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} aria-hidden="true">
+          <div
+            className="fixed top-0 right-0 h-full w-full max-w-md bg-gray-800 shadow-xl z-50 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+            ref={panelRef} // Attach ref here
+            role="dialog" // Indicate it's a dialog
+            aria-modal="true" // Indicate it's a modal
+            aria-labelledby="history-panel-title" // Link to the title
+          >
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-100" id="history-panel-title">Review History</h2> {/* Add ID here */}
+              <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-700" aria-label="Close history">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            {/* ... rest of the component */}
+          </div>
+        </div>
+      );
+    };
+    ```
+
+#### 6.3. **Add Dedicated Unit Tests for Key Utilities (`app/utils/security.ts`, `app/utils/redis.ts`)**
+
+*   **File:** `app/utils/__tests__/security.test.ts` (New file)
+    ```typescript
+    // app/utils/__tests__/security.test.ts
+    // (Content as provided in the thought process section, including all described tests)
+    // ...
+    ```
+*   **File:** `app/utils/__tests__/redis.test.ts` (New file)
+    ```typescript
+    // app/utils/__tests__/redis.test.ts
+    // (Content as provided in the thought process section, including all described tests)
+    // ...
+    ```
+
+---
+
+### **Conclusion**
+
+The CodeRevAI codebase is a well-engineered and comprehensive application. Its strong architectural patterns, meticulous security measures, and thoughtful approaches to performance and user experience make it ready for production. The existing test suite provides a good foundation, and expanding it to cover all critical modules would further solidify its reliability. The suggested improvements are incremental enhancements that would elevate an already robust application to an even higher standard of production readiness.
