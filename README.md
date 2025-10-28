@@ -11,6 +11,13 @@
 
 ---
 
+⭐️ Try it or self-host
+
+- Prefer to run locally or fork? This repo is designed to be easy to self-host — follow the step-by-step in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (or `DEPLOYMENT.md`) to get a running instance. If you find this project useful, please consider starring the repo to help it reach more developers:
+
+[![GitHub stars](https://img.shields.io/github/stars/vizionik25/CodeRevAI?style=social)](https://github.com/vizionik25/CodeRevAI)
+
+
 ## ✨ Features
 
 ### Core Functionality

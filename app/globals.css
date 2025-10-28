@@ -13,3 +13,75 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Background scene for landing page */
+.background-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #000; /* fallback */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.background-scene__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.85));
+  backdrop-filter: blur(6px) saturate(120%);
+}
+
+.background-scene__code {
+  position: relative;
+  z-index: 0;
+  color: #7EE787; /* soft green */
+  max-width: 75%;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  padding: 2.4rem 3.6rem;
+  border-radius: 10px;
+  box-shadow: 0 14px 50px rgba(2,6,23,0.6), 0 0 40px rgba(126,231,135,0.04) inset;
+  transform: translateY(-8%);
+  opacity: 0.92;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  text-shadow: 0 2px 12px rgba(126,231,135,0.06);
+  background: rgba(2,6,23,0.35);
+  border: 1px solid rgba(126,231,135,0.06);
+}
+
+/* subtle typing animation via mask and keyframes */
+@keyframes typingMask {
+  0% { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0% 0 0); }
+}
+
+.background-scene__code::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  animation: typingMask 10s linear infinite;
+  pointer-events: none;
+}
+
+/* make main content render above the scene */
+.main-with-scene { position: relative; z-index: 10; }
+
+/* typing cursor */
+.typing-cursor {
+  display: inline-block;
+  margin-left: 6px;
+  color: #dfffe0;
+  font-family: monospace;
+  font-weight: 600;
+  transform: translateY(-2px);
+  animation: blink 0.8s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to { opacity: 0; }
+}

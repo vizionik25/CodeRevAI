@@ -1,10 +1,11 @@
-'use client';
+"use client";
 import React from 'react';
 import Link from 'next/link';
 import { SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { redirectToCheckout } from './utils/stripeUtils';
 import { logger } from '@/app/utils/logger';
 import { publicEnv } from '@/app/config/env';
+import BackgroundCodeScene from './components/BackgroundCodeScene';
 
 export default function LandingPage() {
   const { isSignedIn } = useUser();
@@ -30,7 +31,9 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200">
+    <div className="min-h-screen bg-black text-gray-200">
+      <BackgroundCodeScene />
+      <div className="main-with-scene">
       {/* Navigation */}
       <nav className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -69,25 +72,33 @@ export default function LandingPage() {
             Get instant, intelligent code reviews powered by advanced AI. Catch bugs, improve performance, and maintain best practices effortlessly.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex items-center gap-3">
+              <a href="https://github.com/vizionik25/CodeRevAI" target="_blank" rel="noopener noreferrer">
+                <button className="px-6 py-3 bg-transparent border border-gray-600 hover:border-gray-500 rounded-lg text-white font-semibold text-lg transition-colors shadow-lg">
+                  Get it on GitHub (Free / Self-host)
+                </button>
+              </a>
+              <a href="https://github.com/vizionik25/CodeRevAI" target="_blank" rel="noopener noreferrer" aria-label="Star on GitHub">
+                <button className="px-3 py-3 bg-yellow-500 hover:bg-yellow-400 rounded-lg text-gray-900 font-semibold transition-colors flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M12 .587l3.668 7.431L23.5 9.75l-5.5 5.356L19.335 24 12 19.897 4.665 24l1.335-8.894L.5 9.75l7.832-1.732z" />
+                  </svg>
+                  Star
+                </button>
+              </a>
+            </div>
             <SignedOut>
               <SignInButton mode="modal">
                 <button className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-semibold text-lg transition-colors shadow-lg">
-                  Get Started Free
+                  Try Hosted Pro
                 </button>
               </SignInButton>
             </SignedOut>
             <SignedIn>
-              <Link href="/dashboard">
-                <button className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-semibold text-lg transition-colors shadow-lg">
-                  Go to Dashboard
-                </button>
-              </Link>
-            </SignedIn>
-            <a href="#features">
-              <button className="px-8 py-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold text-lg transition-colors">
-                Learn More
+              <button onClick={() => handleSubscribe('pro', STRIPE_PRICE_IDS.pro)} className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-semibold text-lg transition-colors shadow-lg">
+                Upgrade to Pro (Hosted)
               </button>
-            </a>
+            </SignedIn>
           </div>
         </div>
       </section>
@@ -168,7 +179,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Free Plan */}
             <div className="bg-gray-800 p-8 rounded-lg border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Free</h3>
+              <h3 className="text-2xl font-bold mb-2">Free (Self-host)</h3>
               <div className="mb-6">
                 <span className="text-4xl font-bold">$0</span>
                 <span className="text-gray-400">/month</span>
@@ -199,20 +210,11 @@ export default function LandingPage() {
                   Community support
                 </li>
               </ul>
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold transition-colors">
-                    Get Started
-                  </button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <Link href="/dashboard">
-                  <button className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold transition-colors">
-                    Get Started
-                  </button>
-                </Link>
-              </SignedIn>
+              <a href="https://github.com/vizionik25/CodeRevAI" target="_blank" rel="noopener noreferrer">
+                <button className="w-full px-6 py-3 bg-transparent border border-gray-600 hover:bg-gray-800 rounded-lg text-white font-semibold transition-colors">
+                  View on GitHub &amp; Self-Host
+                </button>
+              </a>
             </div>
 
             {/* Pro Plan */}
@@ -349,9 +351,27 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-gray-950 py-8">
         <div className="container mx-auto px-4 md:px-6 lg:px-8 text-center text-gray-400">
-          <p>&copy; 2025 [CodeRevAI]. All rights reserved.</p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p>&copy; 2025 [CodeRevAI]. All rights reserved.</p>
+            <div className="flex items-center gap-3 justify-center">
+              <a href="https://github.com/vizionik25/CodeRevAI" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+                <button className="px-4 py-2 bg-transparent border border-gray-700 hover:bg-gray-900 rounded-md text-gray-200 font-medium">
+                  View on GitHub
+                </button>
+              </a>
+              <a href="https://github.com/vizionik25/CodeRevAI" target="_blank" rel="noopener noreferrer" aria-label="Star on GitHub">
+                <button className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 rounded-md text-gray-900 font-semibold flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M12 .587l3.668 7.431L23.5 9.75l-5.5 5.356L19.335 24 12 19.897 4.665 24l1.335-8.894L.5 9.75l7.832-1.732z" />
+                  </svg>
+                  Star
+                </button>
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
