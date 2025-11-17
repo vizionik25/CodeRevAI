@@ -7,7 +7,7 @@
 
 **Production-ready AI-powered code review platform** with enterprise-grade error handling, observability, and security features. Built with Next.js 15, Google Gemini AI, and deployed on Google Cloud Run.
 
-🌐 **Live Demo:** [https://coderevai-sfd77weu7a-vp.a.run.app](https://coderevai-sfd77weu7a-vp.a.run.app)
+🌐 **Live Demo:** [https://coderevai.vizionikmedia.com](https://coderevai.vizionikmedia.com)
 
 ---
 
