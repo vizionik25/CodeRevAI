@@ -138,7 +138,7 @@ describe('History Service Database Operations', () => {
       const result = await getHistoryFromDB(mockUserId);
 
       expect(result).toEqual([]);
-      expect(logger.error).toHaveBeenCalledWith('Error fetching history from database:', dbError);
+      expect(logger.error).toHaveBeenCalledWith('Error fetching history from database', dbError, undefined);
     });
 
     it('should respect the 50 record limit', async () => {
@@ -275,7 +275,7 @@ describe('History Service Database Operations', () => {
       const result = await addHistoryItemToDB(mockUserId, mockHistoryItem);
 
       expect(result).toBe(false);
-      expect(logger.error).toHaveBeenCalledWith('Error saving history to database:', dbError);
+      expect(logger.error).toHaveBeenCalledWith('Error saving history to database', dbError, undefined);
     });
 
     it('should handle missing optional fields', async () => {
@@ -356,7 +356,7 @@ describe('History Service Database Operations', () => {
       (prisma.reviewHistory.deleteMany as Mock).mockRejectedValue(dbError);
 
       await expect(clearHistoryFromDB(mockUserId)).rejects.toThrow('Delete operation failed');
-      expect(logger.error).toHaveBeenCalledWith('Error clearing history from database:', dbError);
+      expect(logger.error).toHaveBeenCalledWith('Error clearing history from database', dbError, undefined);
     });
 
     it('should only delete records for specified user', async () => {
@@ -468,7 +468,7 @@ describe('History Service Database Operations', () => {
 
       await getHistoryFromDB(mockUserId);
 
-      expect(logger.error).toHaveBeenCalledWith('Error fetching history from database:', specificError);
+      expect(logger.error).toHaveBeenCalledWith('Error fetching history from database', specificError, undefined);
     });
 
     it('should log specific error details for addHistoryItemToDB failures', async () => {
@@ -487,7 +487,7 @@ describe('History Service Database Operations', () => {
 
       await addHistoryItemToDB(mockUserId, mockItem);
 
-      expect(logger.error).toHaveBeenCalledWith('Error saving history to database:', constraintError);
+      expect(logger.error).toHaveBeenCalledWith('Error saving history to database', constraintError, undefined);
     });
 
     it('should log specific error details for clearHistoryFromDB failures', async () => {
@@ -496,7 +496,7 @@ describe('History Service Database Operations', () => {
 
       await expect(clearHistoryFromDB(mockUserId)).rejects.toThrow();
 
-      expect(logger.error).toHaveBeenCalledWith('Error clearing history from database:', permissionError);
+      expect(logger.error).toHaveBeenCalledWith('Error clearing history from database', permissionError, undefined);
     });
   });
 });

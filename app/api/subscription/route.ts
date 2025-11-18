@@ -5,12 +5,16 @@ import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
 
 export async function GET(req: Request) {
+  const requestId = req.headers.get('X-Request-ID') || `req_${Date.now()}`;
+  logger.info('Get subscription request started', { endpoint: '/api/subscription' }, requestId);
+
   try {
     const { userId } = await auth();
     
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
-      return NextResponse.json(createErrorResponse(error), { status: 401 });
+      logger.warn('Unauthorized get subscription attempt', {}, requestId);
+      return NextResponse.json(createErrorResponse(error), { status: 401, headers: { 'X-Request-ID': requestId } });
     }
 
     const subscription = await prisma.userSubscription.findUnique({
@@ -18,9 +22,11 @@ export async function GET(req: Request) {
     });
 
     if (!subscription) {
-      return NextResponse.json({ subscription: null });
+      logger.info('No subscription found for user', { userId }, requestId);
+      return NextResponse.json({ subscription: null }, { headers: { 'X-Request-ID': requestId } });
     }
 
+    logger.info('Get subscription request successful', { userId, plan: subscription.plan }, requestId);
     return NextResponse.json({
       subscription: {
         id: subscription.id,
@@ -29,10 +35,10 @@ export async function GET(req: Request) {
         currentPeriodEnd: subscription.currentPeriodEnd?.getTime(),
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       },
-    });
+    }, { headers: { 'X-Request-ID': requestId } });
   } catch (error: unknown) {
-    logger.error('Error fetching subscription:', error);
+    logger.error('Error fetching subscription', error, requestId);
     const apiError = createErrorResponse(error, 'DATABASE_ERROR');
-    return NextResponse.json(apiError, { status: 500 });
+    return NextResponse.json(apiError, { status: 500, headers: { 'X-Request-ID': requestId } });
   }
 }

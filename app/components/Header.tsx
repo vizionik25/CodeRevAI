@@ -43,14 +43,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleHistory }) => {
         <div className="flex items-center gap-4">
           <SignedIn>
             {isPro ? (
-              <Link href="/billing">
-                <button 
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
-                  aria-label="Manage billing and subscription"
-                >
-                  Billing
-                </button>
-              </Link>
+              <>
+                <Link href="/billing">
+                  <button 
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
+                    aria-label="Manage billing and subscription"
+                  >
+                    Billing
+                  </button>
+                </Link>
+                <Link href="/dashboard/analytics">
+                  <button 
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
+                    aria-label="View analytics"
+                  >
+                    Analytics
+                  </button>
+                </Link>
+              </>
             ) : (
               <button 
                 onClick={handleUpgradeClick}

@@ -5,14 +5,18 @@ import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
 
 export async function POST(req: NextRequest) {
+  const requestId = req.headers.get('X-Request-ID') || `req_${Date.now()}`;
+  logger.info('Create checkout session request started', { endpoint: '/api/create-checkout-session' }, requestId);
+
   try {
     const { userId } = await auth();
     
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      logger.warn('Unauthorized create checkout session attempt', {}, requestId);
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 401 }
+        { status: 401, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
       const error = new AppError('INVALID_INPUT', 'Price ID is required');
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 400 }
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -52,15 +56,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    logger.info('Create checkout session request successful', { userId, plan }, requestId);
     // Return the checkout URL for direct redirect (Stripe API 2025-09-30+)
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url }, { headers: { 'X-Request-ID': requestId } });
   } catch (error: unknown) {
-    logger.error('Error creating checkout session:', error);
+    logger.error('Error creating checkout session', error, requestId);
     
     const apiError = createErrorResponse(error, 'PAYMENT_ERROR');
     return NextResponse.json(
       apiError,
-      { status: 500 }
+      { status: 500, headers: { 'X-Request-ID': requestId } }
     );
   }
 }

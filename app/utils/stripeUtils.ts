@@ -22,8 +22,9 @@ export async function redirectToCheckout(priceId: string, plan: string) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create checkout session');
+      const errorPayload = await response.json();
+      const errorMessage = errorPayload.message || 'Failed to create checkout session';
+      throw new Error(errorMessage);
     }
 
     const { url } = await response.json();
