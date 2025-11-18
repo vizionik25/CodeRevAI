@@ -10,7 +10,7 @@ import { logger } from '@/app/utils/logger';
 /**
  * Get review history for a user from database
  */
-export async function getHistoryFromDB(userId: string): Promise<HistoryItem[]> {
+export async function getHistoryFromDB(userId: string, requestId?: string): Promise<HistoryItem[]> {
   try {
     const history = await prisma.reviewHistory.findMany({
       where: { userId },
@@ -29,7 +29,7 @@ export async function getHistoryFromDB(userId: string): Promise<HistoryItem[]> {
       reviewType: item.type === 'repository' ? 'repo' : 'file',
     }));
   } catch (error) {
-    logger.error('Error fetching history from database:', error);
+    logger.error('Error fetching history from database', error, requestId);
     return [];
   }
 }
@@ -37,7 +37,7 @@ export async function getHistoryFromDB(userId: string): Promise<HistoryItem[]> {
 /**
  * Add a new review to history in database
  */
-export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem, 'id'>): Promise<boolean> {
+export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem, 'id'>, requestId?: string): Promise<boolean> {
   try {
     await prisma.reviewHistory.create({
       data: {
@@ -57,7 +57,7 @@ export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem,
   } catch (error) {
     // Log the error but do NOT throw - saving history is non-critical and should not
     // prevent the main review flow from succeeding when the database is unavailable.
-    logger.error('Error saving history to database:', error);
+    logger.error('Error saving history to database', error, requestId);
     return false;
   }
 }
@@ -65,13 +65,13 @@ export async function addHistoryItemToDB(userId: string, item: Omit<HistoryItem,
 /**
  * Clear all history for a user from database
  */
-export async function clearHistoryFromDB(userId: string): Promise<void> {
+export async function clearHistoryFromDB(userId: string, requestId?: string): Promise<void> {
   try {
     await prisma.reviewHistory.deleteMany({
       where: { userId },
     });
   } catch (error) {
-    logger.error('Error clearing history from database:', error);
+    logger.error('Error clearing history from database', error, requestId);
     throw error;
   }
 }

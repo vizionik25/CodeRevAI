@@ -10,13 +10,16 @@ import { serverEnv } from '@/app/config/env';
 const webhookSecret = serverEnv.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(req: NextRequest) {
+  const requestId = `stripe_wh_${Date.now()}`;
+  logger.info('Stripe webhook received', { endpoint: '/api/webhooks/stripe' }, requestId);
+
   try {
     if (!webhookSecret) {
       const error = new AppError('SERVICE_UNAVAILABLE', 'Webhook secret is not configured');
-      logger.error('Stripe webhook secret missing');
+      logger.error('Stripe webhook secret missing', error, requestId);
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 500 }
+        { status: 500, headers: { 'X-Request-ID': requestId } }
       );
     }
     
@@ -27,9 +30,10 @@ export async function POST(req: NextRequest) {
     
     if (!signature) {
       const error = new AppError('INVALID_INPUT', 'Missing stripe-signature header');
+      logger.warn('Missing stripe-signature header', error, requestId);
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 400 }
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -37,12 +41,13 @@ export async function POST(req: NextRequest) {
 
     try {
       event = stripeInstance.webhooks.constructEvent(body, signature, webhookSecret);
+      logger.info('Stripe webhook event constructed', { eventType: event.type }, requestId);
     } catch (err: any) {
-      logger.error(`Webhook signature verification failed: ${err.message}`);
+      logger.error('Webhook signature verification failed', err, requestId);
       const error = new AppError('VALIDATION_ERROR', `Webhook signature verification failed: ${err.message}`);
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 400 }
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -57,7 +62,7 @@ export async function POST(req: NextRequest) {
           sessionId: session.id,
           userId: session.metadata?.userId,
           plan: session.metadata?.plan
-        });
+        }, requestId);
 
         if (userId && plan && session.customer && session.subscription) {
           // Store subscription in database
@@ -91,7 +96,7 @@ export async function POST(req: NextRequest) {
             userId,
             plan,
             subscriptionId: session.subscription
-          });
+          }, requestId);
         }
         
         break;
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
         const subData = subscription as any;
-        logger.info('Subscription created:', subscription.id);
+        logger.info('Subscription created', { subscriptionId: subscription.id }, requestId);
         
         // Find if we already have a user subscription for this customer
         const existingUserSub = await prisma.userSubscription.findUnique({
@@ -129,9 +134,9 @@ export async function POST(req: NextRequest) {
             publicMetadata: { plan: newPlan },
           });
 
-          logger.info(`Subscription ${subscription.id} created for user ${existingUserSub.userId}`);
+          logger.info(`Subscription ${subscription.id} created for user ${existingUserSub.userId}`, {}, requestId);
         } else {
-          logger.warn(`Subscription created but no matching user found for customer ${subscription.customer}`);
+          logger.warn(`Subscription created but no matching user found for customer ${subscription.customer}`, {}, requestId);
         }
         
         break;
@@ -144,7 +149,7 @@ export async function POST(req: NextRequest) {
           subscriptionId: subscription.id,
           customerId: subscription.customer,
           status: subscription.status
-        });
+        }, requestId);
         
         // Find user by Stripe customer ID
         const userSub = await prisma.userSubscription.findUnique({
@@ -175,7 +180,7 @@ export async function POST(req: NextRequest) {
             userId: userSub.userId,
             newPlan,
             subscriptionStatus: subscription.status
-          });
+          }, requestId);
         }
         
         break;
@@ -186,7 +191,7 @@ export async function POST(req: NextRequest) {
         logger.info('Subscription canceled', { 
           subscriptionId: subscription.id,
           customerId: subscription.customer
-        });
+        }, requestId);
         
         const userSub = await prisma.userSubscription.findUnique({
           where: { stripeCustomerId: subscription.customer as string },
@@ -211,7 +216,7 @@ export async function POST(req: NextRequest) {
             customerId: subscription.customer,
             userId: userSub.userId,
             subscriptionId: subscription.id
-          });
+          }, requestId);
         }
         
         break;
@@ -220,12 +225,12 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         const invoiceData = invoice as any; // Stripe SDK types may be incomplete
-        logger.info('Invoice payment succeeded:', {
+        logger.info('Invoice payment succeeded', {
           invoiceId: invoice.id,
           customerId: invoice.customer,
           amount: invoice.amount_paid,
           subscription: invoiceData.subscription
-        });
+        }, requestId);
         
         // Find user subscription
         if (invoice.customer && invoiceData.subscription) {
@@ -249,7 +254,7 @@ export async function POST(req: NextRequest) {
               publicMetadata: { plan: 'pro' },
             });
 
-            logger.info(`Payment succeeded for user ${userSub.userId}, subscription ${invoiceData.subscription}`);
+            logger.info(`Payment succeeded for user ${userSub.userId}, subscription ${invoiceData.subscription}`, {}, requestId);
           }
         }
         
@@ -259,12 +264,12 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         const invoiceData = invoice as any;
-        logger.warn('Invoice payment failed:', {
+        logger.warn('Invoice payment failed', {
           invoiceId: invoice.id,
           customerId: invoice.customer,
           amount: invoice.amount_due,
           subscription: invoiceData.subscription
-        });
+        }, requestId);
         
         // Find user subscription and update status
         if (invoice.customer) {
@@ -282,7 +287,7 @@ export async function POST(req: NextRequest) {
               },
             });
 
-            logger.warn(`Payment failed for user ${userSub.userId}, subscription status updated to past_due`);
+            logger.warn(`Payment failed for user ${userSub.userId}, subscription status updated to past_due`, {}, requestId);
             
             // Note: Email notifications should be handled by Stripe's built-in email system
             // or a separate notification service. You can add custom logic here if needed.
@@ -293,16 +298,16 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        logger.info(`Unhandled event type: ${event.type}`);
+        logger.info(`Unhandled event type: ${event.type}`, {}, requestId);
     }
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true }, { headers: { 'X-Request-ID': requestId } });
   } catch (error: unknown) {
-    logger.error('Error processing webhook:', error);
+    logger.error('Error processing webhook', error, requestId);
     const apiError = createErrorResponse(error, 'PAYMENT_ERROR');
     return NextResponse.json(
       apiError,
-      { status: 500 }
+      { status: 500, headers: { 'X-Request-ID': requestId } }
     );
   }
 }

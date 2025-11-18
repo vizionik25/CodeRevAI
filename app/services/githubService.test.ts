@@ -94,7 +94,7 @@ describe('GitHub Service', () => {
       await fetchRepoFiles('owner', 'repo');
 
       expect(fetch).toHaveBeenNthCalledWith(2, `${GITHUB_API_BASE}/repos/owner/repo/git/trees/master?recursive=1`);
-      expect(logger.info).toHaveBeenCalledWith("Using branch 'master' for repository owner/repo");
+      expect(logger.info).toHaveBeenCalledWith("Using branch 'master' for repository owner/repo", {}, undefined);
     });
 
     it('should fallback to master when main branch fails', async () => {
@@ -115,7 +115,7 @@ describe('GitHub Service', () => {
 
       expect(fetch).toHaveBeenCalledTimes(3);
       expect(fetch).toHaveBeenNthCalledWith(3, `${GITHUB_API_BASE}/repos/owner/repo/git/trees/master?recursive=1`);
-      expect(logger.warn).toHaveBeenCalledWith("Could not fetch 'main' branch, trying 'master'...");
+      expect(logger.warn).toHaveBeenCalledWith("Could not fetch 'main' branch, trying 'master'...", {}, undefined);
     });
 
     it('should fallback to main when master is default but fails', async () => {
@@ -137,7 +137,7 @@ describe('GitHub Service', () => {
       await fetchRepoFiles('owner', 'repo');
 
       expect(fetch).toHaveBeenNthCalledWith(3, `${GITHUB_API_BASE}/repos/owner/repo/git/trees/main?recursive=1`);
-      expect(logger.warn).toHaveBeenCalledWith("Could not fetch 'master' branch, trying 'main'...");
+      expect(logger.warn).toHaveBeenCalledWith("Could not fetch 'master' branch, trying 'main'...", {}, undefined);
     });
 
     it('should handle truncated repository tree', async () => {
@@ -157,7 +157,7 @@ describe('GitHub Service', () => {
 
       await fetchRepoFiles('owner', 'repo');
 
-      expect(logger.warn).toHaveBeenCalledWith("Repository tree is too large and has been truncated by the GitHub API.");
+      expect(logger.warn).toHaveBeenCalledWith("Repository tree is too large and has been truncated by the GitHub API.", {}, undefined);
     });
 
     it('should handle GitHub API rate limiting on repository info and fallback', async () => {
@@ -182,7 +182,7 @@ describe('GitHub Service', () => {
       // Should fall back to 'main' when repo info fails
       const result = await fetchRepoFiles('owner', 'repo');
       
-      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master:', expect.any(Error));
+      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master', expect.any(Error), undefined);
       expect(result).toHaveLength(2); // Should still return files
     });
 
@@ -235,7 +235,7 @@ describe('GitHub Service', () => {
       // Should fall back to 'main' when repo info fails with 404
       const result = await fetchRepoFiles('owner', 'repo');
       
-      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master:', expect.any(Error));
+      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master', expect.any(Error), undefined);
       expect(result).toHaveLength(2); // Should still return files
     });
 
@@ -265,7 +265,7 @@ describe('GitHub Service', () => {
 
       await fetchRepoFiles('owner', 'repo');
 
-      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master:', expect.any(Error));
+      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master', expect.any(Error), undefined);
       expect(fetch).toHaveBeenNthCalledWith(2, `${GITHUB_API_BASE}/repos/owner/repo/git/trees/main?recursive=1`);
     });
   });
@@ -386,7 +386,7 @@ describe('GitHub Service', () => {
       expect(result).toHaveLength(2);
       expect(result[0].content).toBe('console.log("index");');
       expect(result[1].content).toBeUndefined(); // Failed file should not have content
-      expect(logger.error).toHaveBeenCalledWith('Failed to fetch content for README.md:', expect.any(Error));
+      expect(logger.error).toHaveBeenCalledWith('Failed to fetch content for README.md', expect.any(Error), undefined);
     });
 
     it('should handle empty file list', async () => {
@@ -472,7 +472,7 @@ describe('GitHub Service', () => {
       // Should fall back to 'main' when repo info JSON parsing fails
       const result = await fetchRepoFiles('owner', 'repo');
       
-      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master:', expect.any(Error));
+      expect(logger.warn).toHaveBeenCalledWith('Failed to detect default branch, falling back to main/master', expect.any(Error), undefined);
       expect(result).toHaveLength(2); // Should still return files
     });
   });

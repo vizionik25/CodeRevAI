@@ -1,6 +1,7 @@
 import React from "react";
 import { ClerkProvider } from '@clerk/nextjs';
 import { validateEnv } from './config/env';
+import { WebVitals } from './components/WebVitals';
 import "./globals.css";
 
 // Validate environment variables on server startup (skip during build)
@@ -16,7 +17,10 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body>{children}</body>
+        <body>
+          {children}
+          <WebVitals />
+        </body>
       </html>
     </ClerkProvider>
   );

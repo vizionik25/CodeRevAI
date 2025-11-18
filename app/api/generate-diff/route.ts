@@ -13,15 +13,20 @@ import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
 
 export async function POST(req: Request) {
+  const requestId = req.headers.get('X-Request-ID') || `req_${Date.now()}`;
+  const startTime = Date.now();
+
   try {
+    logger.info('Generate diff request started', { endpoint: '/api/generate-diff' }, requestId);
     // Check authentication
     const { userId } = await auth();
     
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
+      logger.warn('Unauthorized generate diff attempt', {}, requestId);
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 401 }
+        { status: 401, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -39,7 +44,7 @@ export async function POST(req: Request) {
         );
         return NextResponse.json(
           createErrorResponse(error),
-          { status: 503 }
+          { status: 503, headers: { 'X-Request-ID': requestId } }
         );
       }
       
@@ -57,6 +62,7 @@ export async function POST(req: Request) {
             'X-RateLimit-Limit': '15',
             'X-RateLimit-Remaining': '0',
             'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+            'X-Request-ID': requestId,
           }
         }
       );
@@ -71,7 +77,7 @@ export async function POST(req: Request) {
       const error = new AppError('INVALID_INPUT', codeValidation.error || 'Invalid code input');
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 400 }
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -80,7 +86,7 @@ export async function POST(req: Request) {
       const error = new AppError('INVALID_INPUT', languageValidation.error || 'Invalid language');
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 400 }
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -88,14 +94,15 @@ export async function POST(req: Request) {
       const error = new AppError('INVALID_INPUT', 'Feedback is required');
       return NextResponse.json(
         createErrorResponse(error),
-        { status: 400 }
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
     if (feedback.length > INPUT_LIMITS.FEEDBACK_MAX) {
+      const error = new AppError('INVALID_INPUT', 'Feedback text is too long');
       return NextResponse.json(
-        { error: 'Feedback text is too long' },
-        { status: 400 }
+        createErrorResponse(error),
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -129,17 +136,32 @@ Return the complete, refactored code now.
 `;
 
     // Call Gemini AI
+    const aiStartTime = Date.now();
     const aiInstance = getGeminiAI();
 
     const response = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-
+    
+    const aiDuration = Date.now() - aiStartTime;
     let modifiedCode = response.text || '';
 
     // Clean up potential markdown fences using utility function
     modifiedCode = cleanMarkdownFences(modifiedCode, sanitizedLanguage);
+
+    logger.info('AI generate diff request completed', {
+      model: 'gemini-2.5-flash',
+      aiDuration: `${aiDuration}ms`,
+      modifiedCodeLength: modifiedCode.length,
+      userId
+    }, requestId);
+
+    const totalDuration = Date.now() - startTime;
+    logger.info('Generate diff request completed successfully', {
+      totalDuration: `${totalDuration}ms`,
+      aiDuration: `${aiDuration}ms`
+    }, requestId);
 
     return NextResponse.json(
       { modifiedCode: modifiedCode.trim() },
@@ -148,18 +170,25 @@ Return the complete, refactored code now.
           'X-RateLimit-Limit': '15',
           'X-RateLimit-Remaining': rateLimit.remaining.toString(),
           'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+          'X-Request-ID': requestId,
         }
       }
     );
   } catch (error: unknown) {
-    logger.error('Error in generate diff API:', error);
+    const duration = Date.now() - startTime;
+    const errorInfo = error instanceof Error 
+      ? error
+      : { message: 'Unknown error', error: String(error) };
+
+    logger.error('Error in generate diff API', errorInfo, requestId);
+    logger.info('Request completed with error', { duration: `${duration}ms` }, requestId);
     
     const apiError = createErrorResponse(error, 'AI_SERVICE_ERROR');
     const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
     
     return NextResponse.json(
       apiError,
-      { status: statusCode }
+      { status: statusCode, headers: { 'X-Request-ID': requestId } }
     );
   }
 }

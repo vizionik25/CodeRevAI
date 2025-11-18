@@ -23,6 +23,15 @@ const nextConfig = {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_STRIPE_PRICE_ID_PRO: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
   },
+
+  webpack: (config, { isServer }) => {
+    // Exclude server-only modules from client-side bundle
+    if (!isServer) {
+      config.resolve.alias['@google-cloud/logging'] = false;
+    }
+
+    return config;
+  },
 };
 
 module.exports = nextConfig;
