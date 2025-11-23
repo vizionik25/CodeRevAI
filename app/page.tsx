@@ -5,7 +5,6 @@ import { SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { redirectToCheckout } from './utils/stripeUtils';
 import { logger } from '@/app/utils/logger';
 import { publicEnv } from '@/app/config/env';
-import BackgroundCodeScene from './components/BackgroundCodeScene';
 
 export default function LandingPage() {
   const { isSignedIn } = useUser();
@@ -20,20 +19,18 @@ export default function LandingPage() {
       alert('Please sign in first to subscribe');
       return;
     }
-    
+
     if (!priceId) {
       alert('Stripe is not configured yet. Please set up your Stripe Price IDs.');
       logger.error('Missing Stripe Price ID for plan:', plan);
       return;
     }
-    
+
     await redirectToCheckout(priceId, plan);
   };
 
   return (
     <div className="min-h-screen bg-black text-gray-200">
-      <BackgroundCodeScene />
-      <div className="main-with-scene">
       {/* Navigation */}
       <nav className="bg-gray-800 shadow-md">
         <div className="container mx-auto px-4 md:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -267,7 +264,7 @@ export default function LandingPage() {
                 </SignInButton>
               </SignedOut>
               <SignedIn>
-                <button 
+                <button
                   onClick={() => handleSubscribe('pro', STRIPE_PRICE_IDS.pro)}
                   className="w-full px-6 py-3 bg-white text-indigo-600 hover:bg-gray-100 rounded-lg font-semibold transition-colors"
                 >
@@ -371,7 +368,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-      </div>
     </div>
   );
 }
