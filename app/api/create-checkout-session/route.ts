@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
       logger.warn('Unauthorized create checkout session attempt', {}, requestId);
@@ -24,6 +24,17 @@ export async function POST(req: NextRequest) {
 
     if (!priceId) {
       const error = new AppError('INVALID_INPUT', 'Price ID is required');
+      return NextResponse.json(
+        createErrorResponse(error),
+        { status: 400, headers: { 'X-Request-ID': requestId } }
+      );
+    }
+
+    // Validate plan against whitelist
+    const ALLOWED_PLANS = ['pro', 'enterprise'];
+    if (!plan || !ALLOWED_PLANS.includes(plan)) {
+      const error = new AppError('INVALID_INPUT', 'Invalid plan specified');
+      logger.warn('Invalid plan attempted in checkout', { plan, userId }, requestId);
       return NextResponse.json(
         createErrorResponse(error),
         { status: 400, headers: { 'X-Request-ID': requestId } }
@@ -61,7 +72,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url }, { headers: { 'X-Request-ID': requestId } });
   } catch (error: unknown) {
     logger.error('Error creating checkout session', error, requestId);
-    
+
     const apiError = createErrorResponse(error, 'PAYMENT_ERROR');
     return NextResponse.json(
       apiError,

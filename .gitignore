@@ -173,5 +173,8 @@ id_ed25519.pub
 PERSONAL_NOTES.md
 DRAFT*.md
 WIP*.md
+GEMINI.md
+repository-review.review(6).mdgemini
+.genkit
 
 /app/generated/prisma

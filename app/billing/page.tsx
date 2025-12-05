@@ -15,6 +15,7 @@ export default function BillingPage() {
   const { user, isSignedIn } = useUser();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isProcessingStripe, setIsProcessingStripe] = useState(false);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -37,6 +38,35 @@ export default function BillingPage() {
       setLoading(false);
     }
   }, [user]);
+
+  const handleOpenCustomerPortal = async () => {
+    setIsProcessingStripe(true);
+    try {
+      const response = await fetch('/api/customer-portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json();
+        throw new Error(errorPayload.message || 'Failed to open customer portal');
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url; // Redirect to Stripe Customer Portal
+      } else {
+        throw new Error('No Stripe Customer Portal URL returned from server.');
+      }
+    } catch (error: any) {
+      console.error('Error opening customer portal:', error);
+      alert(error.message || 'Failed to open billing portal. Please try again.');
+    } finally {
+      setIsProcessingStripe(false);
+    }
+  };
 
   if (!isSignedIn) {
     return (
@@ -90,11 +120,10 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <p className="text-gray-400 mb-2">Status</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                    subscription.status === 'active' 
-                      ? 'bg-green-600/20 text-green-400' 
-                      : 'bg-gray-600/20 text-gray-400'
-                  }`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${subscription.status === 'active'
+                    ? 'bg-green-600/20 text-green-400'
+                    : 'bg-gray-600/20 text-gray-400'
+                    }`}>
                     {subscription.status}
                   </span>
                 </div>
@@ -112,18 +141,13 @@ export default function BillingPage() {
                 </div>
               </div>
               <div className="mt-6 flex gap-4">
-                <button className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors">
-                  Update Payment Method
+                <button
+                  onClick={handleOpenCustomerPortal}
+                  disabled={isProcessingStripe}
+                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessingStripe ? 'Loading...' : 'Manage Subscription'}
                 </button>
-                {subscription.cancelAtPeriodEnd ? (
-                  <button className="px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors">
-                    Resume Subscription
-                  </button>
-                ) : (
-                  <button className="px-6 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors">
-                    Cancel Subscription
-                  </button>
-                )}
               </div>
             </div>
 

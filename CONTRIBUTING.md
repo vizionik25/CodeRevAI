@@ -126,6 +126,20 @@ git checkout -b feat/add-webhook-retry-logic
    npm run lint        # Check for linting issues
    ```
 
+4. **Database Migrations:**
+   - Use descriptive names for migrations that describe the change
+   - Avoid environment-specific names (e.g., "development", "production")
+   - Good examples: `add_user_subscriptions`, `update_review_history_indexes`
+   - Bad examples: `development`, `test_migration`, `migration_1`
+   
+   ```bash
+   # Creating a new migration
+   npx prisma migrate dev --name add_user_subscriptions
+   
+   # Deploying migrations to production
+   npx prisma migrate deploy
+   ```
+
 4. **Commit your changes** (see [Commit Message Format](#commit-message-format))
 
 5. **Keep your branch updated:**
