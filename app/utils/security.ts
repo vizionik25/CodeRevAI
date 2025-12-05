@@ -9,20 +9,20 @@ import { INPUT_LIMITS } from '@/app/data/constants';
  */
 export function sanitizeInput(input: string): string {
   if (!input) return '';
-  
+
   let sanitized = input;
-  
+
   // Remove null bytes
   sanitized = sanitized.replace(/\0/g, '');
-  
+
   // Trim whitespace
   sanitized = sanitized.trim();
-  
+
   // Limit length to prevent DOS (before escaping to preserve original size intent)
   if (sanitized.length > INPUT_LIMITS.GLOBAL_INPUT_SANITY_LIMIT) {
     sanitized = sanitized.substring(0, INPUT_LIMITS.GLOBAL_INPUT_SANITY_LIMIT);
   }
-  
+
   return sanitized;
 }
 
@@ -33,9 +33,9 @@ export function sanitizeInput(input: string): string {
  */
 export function sanitizeForAIPrompt(input: string): string {
   if (!input) return '';
-  
+
   let sanitized = sanitizeInput(input);
-  
+
   // Escape markdown characters that could be misinterpreted as AI instructions
   sanitized = sanitized
     .replace(/`/g, '\\`')      // Escape backticks (code blocks)
@@ -48,7 +48,7 @@ export function sanitizeForAIPrompt(input: string): string {
     .replace(/\)/g, '\\)')
     .replace(/</g, '&lt;')     // Basic HTML escaping
     .replace(/>/g, '&gt;');
-  
+
   return sanitized;
 }
 
@@ -59,15 +59,16 @@ export function validateCodeInput(code: string): { valid: boolean; error?: strin
   if (!code || typeof code !== 'string') {
     return { valid: false, error: 'Code must be a non-empty string' };
   }
-  
+
   if (code.length > INPUT_LIMITS.MAX_CODE_LENGTH) {
     return { valid: false, error: `Code exceeds maximum size of ${(INPUT_LIMITS.MAX_CODE_LENGTH / 1024 / 1024).toFixed(1)}MB` };
   }
-  
-  if (code.length < 10) {
-    return { valid: false, error: 'Code is too short to analyze' };
+
+  // Lowered from 10 to 5 to allow very short but valid code snippets
+  if (code.length < 5) {
+    return { valid: false, error: 'Code is too short to analyze (minimum 5 characters)' };
   }
-  
+
   return { valid: true };
 }
 
@@ -78,15 +79,15 @@ export function validateCustomPrompt(prompt: string): { valid: boolean; error?: 
   if (!prompt) {
     return { valid: true }; // Empty prompt is okay
   }
-  
+
   if (typeof prompt !== 'string') {
     return { valid: false, error: 'Prompt must be a string' };
   }
-  
+
   if (prompt.length > INPUT_LIMITS.CUSTOM_PROMPT_MAX) {
     return { valid: false, error: 'Custom prompt exceeds maximum size of 5KB' };
   }
-  
+
   return { valid: true };
 }
 
@@ -97,7 +98,7 @@ export function validateLanguage(language: string): { valid: boolean; error?: st
   if (!language || typeof language !== 'string') {
     return { valid: false, error: 'Language must be specified' };
   }
-  
+
   // Whitelist common programming languages
   const validLanguages = [
     'javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp',
@@ -105,11 +106,11 @@ export function validateLanguage(language: string): { valid: boolean; error?: st
     'r', 'sql', 'html', 'css', 'jsx', 'tsx', 'json', 'yaml', 'xml',
     'shell', 'bash', 'powershell', 'markdown', 'text'
   ];
-  
+
   if (!validLanguages.includes(language.toLowerCase())) {
     return { valid: false, error: 'Unsupported programming language' };
   }
-  
+
   return { valid: true };
 }
 
@@ -120,22 +121,22 @@ export function validateReviewModes(modes: any): { valid: boolean; error?: strin
   if (!Array.isArray(modes)) {
     return { valid: false, error: 'Review modes must be an array' };
   }
-  
+
   const validModes = [
     'comprehensive', 'bug_fixes', 'performance', 'security',
     'best_practices', 'test_generation', 'production_ready'
   ];
-  
+
   for (const mode of modes) {
     if (typeof mode !== 'string' || !validModes.includes(mode)) {
       return { valid: false, error: `Invalid review mode: ${mode}` };
     }
   }
-  
+
   if (modes.length > 5) {
     return { valid: false, error: 'Too many review modes selected (max 5)' };
   }
-  
+
   return { valid: true };
 }
 
@@ -150,7 +151,7 @@ export function isSensitiveFile(filePath: string): boolean {
     /\.env\.local/i,
     /\.env\.production/i,
     /\.env\.development/i,
-    
+
     // Key files
     /\.key$/i,
     /\.pem$/i,
@@ -158,7 +159,7 @@ export function isSensitiveFile(filePath: string): boolean {
     /\.p12$/i,
     /\.asc$/i,
     /\.gpg$/i,
-    
+
     // Secret/credential files
     /secret/i,
     /credential/i,
@@ -166,19 +167,19 @@ export function isSensitiveFile(filePath: string): boolean {
     /api[_-]?key/i,
     /auth[_-]?token/i,
     /private[_-]?key/i,
-    
+
     // Config files that often contain secrets
     /\.npmrc$/i,
     /\.pypirc$/i,
     /\.aws\/credentials/i,
     /\.ssh\//i,
     /\.gnupg\//i,
-    
+
     // Database files
     /\.db$/i,
     /\.sqlite$/i,
     /\.sqlite3$/i,
-    
+
     // Specific files
     /^\.git\//i,
     /^node_modules\//i,
@@ -188,7 +189,7 @@ export function isSensitiveFile(filePath: string): boolean {
     /^vendor\//i,
     /^target\//i,
   ];
-  
+
   return sensitivePatterns.some(pattern => pattern.test(filePath));
 }
 

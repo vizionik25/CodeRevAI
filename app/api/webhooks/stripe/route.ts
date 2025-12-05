@@ -130,6 +130,16 @@ export async function POST(req: NextRequest) {
         const subData = subscription as any;
         logger.info('Subscription created', { subscriptionId: subscription.id }, requestId);
 
+        // Idempotency check: verify subscription hasn't already been processed
+        const existingSubscriptionById = await prisma.userSubscription.findUnique({
+          where: { stripeSubscriptionId: subscription.id },
+        });
+
+        if (existingSubscriptionById) {
+          logger.info('Subscription already processed (idempotent check)', { subscriptionId: subscription.id }, requestId);
+          break;
+        }
+
         // Find if we already have a user subscription for this customer
         const existingUserSub = await prisma.userSubscription.findUnique({
           where: { stripeCustomerId: subscription.customer as string },

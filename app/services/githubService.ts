@@ -3,6 +3,7 @@ import { CodeFile, Language } from '@/app/types';
 import { logger } from '@/app/utils/logger';
 import { parseGitHubUrl, GITHUB_API_BASE } from '@/app/utils/githubUtils';
 import { AppError } from '@/app/types/errors';
+import { getLanguageForFile } from '@/app/utils/languageDetection';
 
 // GitHub API types
 interface GitHubTreeFile {
@@ -48,11 +49,6 @@ async function handleGitHubApiResponse(response: Response, resource: string, req
     }
 
     return response;
-}
-
-function getLanguageForFile(filePath: string): Language | undefined {
-    const extension = '.' + filePath.split('.').pop()?.toLowerCase();
-    return LANGUAGES.find(lang => lang.extensions.includes(extension));
 }
 
 /**
