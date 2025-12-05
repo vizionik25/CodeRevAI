@@ -50,7 +50,7 @@ export default function HomePage() {
     try {
       const review = await reviewCode(codeToReview, language, prompt, reviewMode);
       setFeedback(review);
-      
+
       const languageData = LANGUAGES.find(l => l.value === language);
       const languageLabel = languageData ? languageData.label : language;
 
@@ -64,19 +64,24 @@ export default function HomePage() {
         mode: reviewMode,
         reviewType: 'file',
       };
+
+      // Optimistic update
+      setHistory(prev => [historyItem, ...prev].slice(0, 50));
+
       await addHistoryItem(historyItem);
-      const updatedHistory = await getHistory();
-      setHistory(updatedHistory);
+      // Optional: re-fetch to ensure sync, but optimistic update makes it snappy
+      // const updatedHistory = await getHistory();
+      // setHistory(updatedHistory);
 
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
       let context: typeof errorContext = 'review';
-      
+
       // Handle structured AppError from services
       if (e && typeof e === 'object' && 'code' in e) {
         const apiError = e as ApiError;
         errorMessage = apiError.message;
-        
+
         // Map error codes to contexts for better user feedback
         switch (apiError.code) {
           case 'RATE_LIMIT_EXCEEDED':
@@ -102,7 +107,7 @@ export default function HomePage() {
         errorMessage = e.message;
         context = 'review';
       }
-      
+
       setError(`Failed to get review: ${errorMessage}`);
       setErrorContext(context);
       logger.error('Review error:', e);
@@ -111,7 +116,7 @@ export default function HomePage() {
     }
   }, [selectedFile, reviewMode]);
 
-  const handleRepoReview = useCallback(async (filesWithContent: {path: string, content: string}[], repoUrl: string, prompt: string) => {
+  const handleRepoReview = useCallback(async (filesWithContent: { path: string, content: string }[], repoUrl: string, prompt: string) => {
     setIsLoading(true);
     setFeedback('');
     setError(null);
@@ -122,7 +127,7 @@ export default function HomePage() {
     try {
       const review = await reviewRepository(filesWithContent, repoUrl, prompt, reviewMode);
       setFeedback(review);
-      
+
       const historyItem: HistoryItem = {
         id: crypto.randomUUID(),
         timestamp: Date.now(),
@@ -133,19 +138,23 @@ export default function HomePage() {
         mode: reviewMode,
         reviewType: 'repo',
       };
+
+      // Optimistic update
+      setHistory(prev => [historyItem, ...prev].slice(0, 50));
+
       await addHistoryItem(historyItem);
-      const updatedHistory = await getHistory();
-      setHistory(updatedHistory);
-      
+      // const updatedHistory = await getHistory();
+      // setHistory(updatedHistory);
+
     } catch (e) {
       let errorMessage = 'An unknown error occurred.';
       let context: typeof errorContext = 'review';
-      
+
       // Handle structured AppError from services
       if (e && typeof e === 'object' && 'code' in e) {
         const apiError = e as ApiError;
         errorMessage = apiError.message;
-        
+
         // Map error codes to contexts for better user feedback
         switch (apiError.code) {
           case 'RATE_LIMIT_EXCEEDED':
@@ -172,7 +181,7 @@ export default function HomePage() {
         errorMessage = e.message;
         context = 'review';
       }
-      
+
       setError(`Failed to get review: ${errorMessage}`);
       setErrorContext(context);
       logger.error('Repository review error:', e);
@@ -184,19 +193,19 @@ export default function HomePage() {
   const handleSelectHistoryItem = (item: HistoryItem) => {
     const modes = Array.isArray(item.mode) ? item.mode : [item.mode || 'comprehensive'];
     if (item.reviewType === 'repo') {
-        setSelectedFile(null);
-        setCode('');
-        setFeedback(item.feedback);
-        setReviewMode(modes);
-        setReviewType('repo');
+      setSelectedFile(null);
+      setCode('');
+      setFeedback(item.feedback);
+      setReviewMode(modes);
+      setReviewType('repo');
     } else {
-        const isPasted = item.fileName === 'Pasted Snippet';
-        const language = { value: item.language.toLowerCase(), label: item.language, extensions: [] };
-        setSelectedFile(isPasted ? null : { path: item.fileName, language });
-        setCode(item.code);
-        setFeedback(item.feedback);
-        setReviewMode(modes);
-        setReviewType('file');
+      const isPasted = item.fileName === 'Pasted Snippet';
+      const language = { value: item.language.toLowerCase(), label: item.language, extensions: [] };
+      setSelectedFile(isPasted ? null : { path: item.fileName, language });
+      setCode(item.code);
+      setFeedback(item.feedback);
+      setReviewMode(modes);
+      setReviewType('file');
     }
     setDirectoryHandle(null); // History items don't have a live handle
     setIsHistoryPanelOpen(false);
@@ -212,8 +221,8 @@ export default function HomePage() {
     <div className="bg-gray-900 min-h-screen text-gray-200 font-sans">
       <Header onToggleHistory={() => setIsHistoryPanelOpen(prev => !prev)} />
       <Notification message={error} onDismiss={() => setError(null)} />
-      <HistoryPanel 
-        isOpen={isHistoryPanelOpen} 
+      <HistoryPanel
+        isOpen={isHistoryPanelOpen}
         onClose={() => setIsHistoryPanelOpen(false)}
         history={history}
         onSelect={handleSelectHistoryItem}
@@ -240,9 +249,9 @@ export default function HomePage() {
             />
           </div>
           <div>
-            <FeedbackDisplay 
-              feedback={feedback} 
-              isLoading={isLoading} 
+            <FeedbackDisplay
+              feedback={feedback}
+              isLoading={isLoading}
               selectedFile={selectedFile}
               originalCode={code}
               setError={setError}

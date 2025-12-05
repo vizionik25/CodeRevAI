@@ -7,62 +7,28 @@ import { AppError, ApiError, ErrorCode } from '@/app/types/errors';
 /**
  * Deserialize API error response and throw AppError
  */
-async function handleApiError(response: Response): Promise<never> {
-  try {
-    const errorData: ApiError = await response.json();
-    
-    // Check if we received a structured error response
-    if (errorData.code && errorData.message) {
-      throw new AppError(
-        errorData.code,
-        errorData.message,
-        errorData.details,
-        errorData.retryable
-      );
-    }
-    
-    // Fallback for non-structured errors
-    throw new AppError(
-      'INTERNAL_ERROR',
-      errorData.message || `Request failed with status ${response.status}`,
-      undefined,
-      false
-    );
-  } catch (parseError) {
-    // If JSON parsing fails, create a generic error
-    if (parseError instanceof AppError) {
-      throw parseError;
-    }
-    
-    throw new AppError(
-      'INTERNAL_ERROR',
-      `Request failed with status ${response.status}`,
-      response.statusText,
-      false
-    );
-  }
-}
+import { handleApiError } from '@/app/utils/apiErrorHandling';
 
 /**
  * Retry a fetch request with exponential backoff
  * Useful for handling transient network issues or temporary service unavailability
  */
 async function fetchWithRetry(
-  url: string, 
-  options: RequestInit, 
-  retries: number = 3, 
+  url: string,
+  options: RequestInit,
+  retries: number = 3,
   delay: number = 1000
 ): Promise<Response> {
   try {
     const response = await fetch(url, options);
-    
+
     // Retry on server errors (5xx) if retries remaining
     if (!response.ok && response.status >= 500 && retries > 0) {
       logger.warn(`Retrying ${url} due to ${response.status} status. Retries left: ${retries}`);
       await new Promise(res => setTimeout(res, delay));
       return fetchWithRetry(url, options, retries - 1, delay * 2);
     }
-    
+
     return response;
   } catch (error) {
     // Retry on network errors if retries remaining
@@ -106,7 +72,7 @@ export async function reviewCode(code: string, language: string, customPrompt: s
       logger.error('Code review error:', { code: error.code, message: error.message });
       throw error;
     }
-    
+
     // Network or other errors
     logger.error('Unexpected error during code review:', error);
     throw new AppError(
@@ -149,7 +115,7 @@ export async function reviewRepository(files: { path: string, content: string }[
       logger.error('Repository review error:', { code: error.code, message: error.message });
       throw error;
     }
-    
+
     // Network or other errors
     logger.error('Unexpected error during repository review:', error);
     throw new AppError(
@@ -193,7 +159,7 @@ export async function generateFullCodeFromReview(originalCode: string, language:
       logger.error('Code generation error:', { code: error.code, message: error.message });
       throw error;
     }
-    
+
     // Network or other errors
     logger.error('Unexpected error during code generation:', error);
     throw new AppError(

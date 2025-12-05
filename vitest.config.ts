@@ -21,6 +21,7 @@ export default defineConfig({
         '**/*.config.*',
         '**/middleware.ts',
         'scripts/**',
+        'app/lib/prisma.ts',
       ],
     },
   },

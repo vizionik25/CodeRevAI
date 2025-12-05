@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
-import ReactDiffViewer from 'react-diff-viewer-continued';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
+
+// Lazy load heavy components
+const ReactDiffViewer = React.lazy(() => import('react-diff-viewer-continued'));
+const SyntaxHighlighter = React.lazy(() => import('react-syntax-highlighter').then(mod => ({ default: mod.Prism })));
 import { LoadingState } from './LoadingState';
 import { ErrorMessage } from './ErrorMessage';
 import { LoaderIcon } from './icons/LoaderIcon';
@@ -133,27 +135,29 @@ export const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ feedback, isLo
             </button>
           </div>
           <div className="flex-grow overflow-auto">
-            <ReactDiffViewer
-              oldValue={originalCode}
-              newValue={diffCode || ''}
-              splitView={true}
-              useDarkTheme={true}
-              styles={{
-                variables: {
-                  dark: {
-                    addedBackground: '#047857', // green-700
-                    removedBackground: '#991B1B', // red-800
-                  }
-                },
-                diffContainer: { backgroundColor: '#1F2937', border: 'none' }, // gray-800
-                gutter: { backgroundColor: '#374151', border: 'none' }, // gray-700
-                line: {
-                  // Fix: Moved text color property here from 'variables.dark' as 'color' is not a valid property there.
-                  color: '#D1D5DB',
-                  '&:hover': { background: '#374151' },
-                },
-              }}
-            />
+            <Suspense fallback={<LoadingState type="diff" showProgress={true} />}>
+              <ReactDiffViewer
+                oldValue={originalCode}
+                newValue={diffCode || ''}
+                splitView={true}
+                useDarkTheme={true}
+                styles={{
+                  variables: {
+                    dark: {
+                      addedBackground: '#047857', // green-700
+                      removedBackground: '#991B1B', // red-800
+                    }
+                  },
+                  diffContainer: { backgroundColor: '#1F2937', border: 'none' }, // gray-800
+                  gutter: { backgroundColor: '#374151', border: 'none' }, // gray-700
+                  line: {
+                    // Fix: Moved text color property here from 'variables.dark' as 'color' is not a valid property there.
+                    color: '#D1D5DB',
+                    '&:hover': { background: '#374151' },
+                  },
+                }}
+              />
+            </Suspense>
           </div>
         </div>
       );
@@ -167,14 +171,16 @@ export const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ feedback, isLo
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || '');
               return !inline && match ? (
-                <SyntaxHighlighter
-                  style={vscDarkPlus as any}
-                  language={match[1]}
-                  PreTag="div"
-                  {...props}
-                >
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
+                <Suspense fallback={<code className={className} {...props}>{children}</code>}>
+                  <SyntaxHighlighter
+                    style={vscDarkPlus as any}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                </Suspense>
               ) : (
                 <code className="bg-gray-700 rounded px-1.5 py-1 text-indigo-300 font-mono" {...props}>
                   {children}

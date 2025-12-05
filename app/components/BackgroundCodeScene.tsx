@@ -73,10 +73,10 @@ export const BackgroundCodeScene: React.FC = () => {
       timeoutRef.current = window.setTimeout(tick, Math.round(delay));
     }
 
-  // start typing after small delay
-  indexRef.current = 0;
-  directionRef.current = 1;
-  timeoutRef.current = window.setTimeout(tick, 300);
+    // start typing after small delay
+    indexRef.current = 0;
+    directionRef.current = 1;
+    timeoutRef.current = window.setTimeout(tick, 300);
 
     return () => {
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
@@ -88,7 +88,7 @@ export const BackgroundCodeScene: React.FC = () => {
       <div className="background-scene__overlay"></div>
       <pre className="background-scene__code">
         <code>{text}</code>
-        <span className="typing-cursor" aria-hidden>▌</span>
+        <span className="typing-cursor" aria-hidden>█</span>
       </pre>
     </div>
   );

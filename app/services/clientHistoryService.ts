@@ -7,44 +7,7 @@ import { logger } from '@/app/utils/logger';
  * These functions call the API routes which handle database operations
  */
 
-/**
- * Deserialize API error response and throw AppError
- */
-async function handleApiError(response: Response): Promise<never> {
-  try {
-    const errorData: ApiError = await response.json();
-    
-    // Check if we received a structured error response
-    if (errorData.code && errorData.message) {
-      throw new AppError(
-        errorData.code,
-        errorData.message,
-        errorData.details,
-        errorData.retryable
-      );
-    }
-    
-    // Fallback for non-structured errors
-    throw new AppError(
-      'INTERNAL_ERROR',
-      errorData.message || `Request failed with status ${response.status}`,
-      undefined,
-      false
-    );
-  } catch (parseError) {
-    // If JSON parsing fails, create a generic error
-    if (parseError instanceof AppError) {
-      throw parseError;
-    }
-    
-    throw new AppError(
-      'INTERNAL_ERROR',
-      `Request failed with status ${response.status}`,
-      response.statusText,
-      false
-    );
-  }
-}
+import { handleApiError } from '@/app/utils/apiErrorHandling';
 
 /**
  * Get review history for the current user from database
@@ -53,11 +16,11 @@ async function handleApiError(response: Response): Promise<never> {
 export async function getHistory(): Promise<HistoryItem[]> {
   try {
     const response = await fetch('/api/history');
-    
+
     if (!response.ok) {
       await handleApiError(response);
     }
-    
+
     const data = await response.json();
     return data.history || [];
   } catch (error) {
@@ -66,7 +29,7 @@ export async function getHistory(): Promise<HistoryItem[]> {
       logger.error('History fetch error:', { code: error.code, message: error.message });
       throw error;
     }
-    
+
     // Network or other errors
     logger.error('Unexpected error fetching history:', error);
     throw new AppError(
@@ -89,7 +52,7 @@ export async function addHistoryItem(item: HistoryItem): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item),
     });
-    
+
     if (!response.ok) {
       await handleApiError(response);
     }
@@ -99,7 +62,7 @@ export async function addHistoryItem(item: HistoryItem): Promise<void> {
       logger.error('Add history error:', { code: error.code, message: error.message });
       throw error;
     }
-    
+
     // Network or other errors - don't throw, just log
     // History addition is not critical, shouldn't block user workflow
     logger.warn('Failed to add history item (non-critical):', error);
@@ -115,7 +78,7 @@ export async function clearHistory(): Promise<void> {
     const response = await fetch('/api/history', {
       method: 'DELETE',
     });
-    
+
     if (!response.ok) {
       await handleApiError(response);
     }
@@ -125,7 +88,7 @@ export async function clearHistory(): Promise<void> {
       logger.error('Clear history error:', { code: error.code, message: error.message });
       throw error;
     }
-    
+
     // Network or other errors
     logger.error('Unexpected error clearing history:', error);
     throw new AppError(
