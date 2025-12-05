@@ -1,4 +1,5 @@
 import React from "react";
+import { Analytics } from '@vercel/analytics/next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { validateEnv } from './config/env';
 import { WebVitals } from './components/WebVitals';
@@ -19,6 +20,7 @@ export default function RootLayout({
       <html lang="en">
         <body>
           {children}
+          <Analytics />
           <WebVitals />
         </body>
       </html>
