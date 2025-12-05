@@ -5,9 +5,21 @@ import { SignInButton, SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import { redirectToCheckout } from './utils/stripeUtils';
 import { logger } from '@/app/utils/logger';
 import { publicEnv } from '@/app/config/env';
+import { useTypewriter } from './hooks/useTypewriter';
 
 export default function LandingPage() {
   const { isSignedIn } = useUser();
+
+  // Typewriter effect for hero heading
+  const heroText = "Elevate Your Code Quality with AI";
+  const { displayedText, showCursor } = useTypewriter({
+    text: heroText,
+    speed: 80,
+    deleteSpeed: 40,
+    delay: 500,
+    pauseTime: 2000,
+    loop: true
+  });
 
   // Stripe Price IDs from environment configuration
   const STRIPE_PRICE_IDS = {
@@ -62,8 +74,11 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 md:px-6 lg:px-8 py-20 md:py-32">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Elevate Your Code Quality with AI
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent min-h-[4.5rem] flex items-center justify-center">
+            {displayedText}
+            {showCursor && (
+              <span className="inline-block w-1 h-12 md:h-16 ml-1 bg-gradient-to-r from-indigo-400 to-purple-400 animate-pulse"></span>
+            )}
           </h1>
           <p className="text-xl md:text-2xl text-gray-400 mb-8">
             Get instant, intelligent code reviews powered by advanced AI. Catch bugs, improve performance, and maintain best practices effortlessly.
@@ -186,7 +201,7 @@ export default function LandingPage() {
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  10 reviews per month
+                  Unlimited free reviews per month
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +244,7 @@ export default function LandingPage() {
                   <svg className="w-5 h-5 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Unlimited reviews
+                  10 free reviews per month
                 </li>
                 <li className="flex items-center">
                   <svg className="w-5 h-5 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
