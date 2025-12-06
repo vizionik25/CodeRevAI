@@ -23,7 +23,7 @@
     "check-env": "node scripts/check-env.js"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.33.4",
+    "@clerk/nextjs": "^6.36.0",
     "@google-cloud/logging": "^11.2.1",
     "@google/genai": "^1.21.0",
     "@prisma/client": "^6.17.1",
