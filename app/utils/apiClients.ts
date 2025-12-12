@@ -34,7 +34,7 @@ let stripeClient: Stripe | null = null;
 export function getStripe(): Stripe {
   if (!stripeClient && serverEnv.STRIPE_SECRET_KEY) {
     stripeClient = new Stripe(serverEnv.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-09-30.clover',
+      apiVersion: '2025-10-29.clover',
     });
   }
   if (!stripeClient) {
