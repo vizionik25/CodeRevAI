@@ -12,8 +12,10 @@ export const LANGUAGES: Language[] = [
   { value: 'php', label: 'PHP', extensions: ['.php'] },
 ];
 
+export const AUTO_DETECT_LANGUAGE_KEY = 'auto-detect';
+
 export const LANGUAGE_OVERRIDE_OPTIONS = [
-  { value: 'auto-detect', label: 'Auto-Detect' },
+  { value: AUTO_DETECT_LANGUAGE_KEY, label: 'Auto-Detect' },
   { value: 'python', label: 'Python' },
   { value: 'javascript', label: 'JavaScript' },
   { value: 'typescript', label: 'TypeScript' },

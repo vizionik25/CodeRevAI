@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { CodeFile } from '@/app/types';
 import { fetchRepoFiles, fetchFileContent, fetchFilesWithContent } from '../services/githubService';
 import { parseGitHubUrl } from '@/app/utils/githubUtils';
@@ -8,6 +8,10 @@ import { LanguageOverrideSelector } from './LanguageOverrideSelector';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { ReviewModeSelector } from './ReviewModeSelector';
 import { LocalFolderWarningModal } from './LocalFolderWarningModal';
+import { AUTO_DETECT_LANGUAGE_KEY } from '@/app/data/constants';
+
+// Workaround for TypeScript build issue where React types aren't resolving correctly
+const { useState, useEffect, useRef } = React as any;
 
 interface CodePasteModalProps {
   isOpen: boolean;
@@ -16,7 +20,7 @@ interface CodePasteModalProps {
   initialCode: string;
 }
 
-const CodePasteModal: React.FC<CodePasteModalProps> = ({ isOpen, onClose, onConfirm, initialCode }) => {
+const CodePasteModal = ({ isOpen, onClose, onConfirm, initialCode }: CodePasteModalProps) => {
   const [code, setCode] = useState(initialCode);
 
   useEffect(() => {
@@ -35,17 +39,17 @@ const CodePasteModal: React.FC<CodePasteModalProps> = ({ isOpen, onClose, onConf
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose} aria-modal="true" role="dialog">
-      <div 
+      <div
         className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl h-4/5 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-gray-700 flex justify-between items-center">
           <h2 className="text-lg font-semibold">Paste Code</h2>
-           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-700" aria-label="Close modal">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-700" aria-label="Close modal">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div className="p-4 flex-grow">
           <textarea
@@ -71,7 +75,7 @@ const CodePasteModal: React.FC<CodePasteModalProps> = ({ isOpen, onClose, onConf
 
 interface CodeInputProps {
   onReview: (code: string, language: string, customPrompt: string) => void;
-  onRepoReview: (files: {path: string, content: string}[], repoUrl: string, customPrompt: string) => void;
+  onRepoReview: (files: { path: string, content: string }[], repoUrl: string, customPrompt: string) => void;
   isLoading: boolean;
   selectedFile: CodeFile | null;
   setSelectedFile: (file: CodeFile | null) => void;
@@ -87,31 +91,31 @@ interface CodeInputProps {
 
 const HIDE_WARNING_KEY = 'hideLocalFolderWarning';
 
-export const CodeInput: React.FC<CodeInputProps> = ({ 
-    onReview, 
-    onRepoReview,
-    isLoading, 
-    selectedFile, 
-    setSelectedFile, 
-    code, 
-    setCode, 
-    customPrompt,
-    setCustomPrompt,
-    setError,
-    reviewModes,
-    setReviewModes,
-    setDirectoryHandle,
-}) => {
+export const CodeInput = ({
+  onReview,
+  onRepoReview,
+  isLoading,
+  selectedFile,
+  setSelectedFile,
+  code,
+  setCode,
+  customPrompt,
+  setCustomPrompt,
+  setError,
+  reviewModes,
+  setReviewModes,
+  setDirectoryHandle,
+}: CodeInputProps) => { // Removed React.FC and added manual prop typing
   const [repoUrl, setRepoUrl] = useState('');
-  const [files, setFiles] = useState<CodeFile[]>([]);
+  const [files, setFiles] = useState([]); // Removed generic <CodeFile[]>
   const [isFetchingFiles, setIsFetchingFiles] = useState(false);
-  const [languageOverride, setLanguageOverride] = useState('auto-detect');
+  const [languageOverride, setLanguageOverride] = useState(AUTO_DETECT_LANGUAGE_KEY);
   const [showCustomPrompt, setShowCustomPrompt] = useState(false);
   const [showReviewOptions, setShowReviewOptions] = useState(false);
   const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [isIframe, setIsIframe] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null); // Removed generic <HTMLInputElement>
 
 
   useEffect(() => {
@@ -154,24 +158,24 @@ export const CodeInput: React.FC<CodeInputProps> = ({
       setIsFetchingFiles(false);
     }
   };
-  
+
   const handleLocalFolderClick = () => {
     const shouldHideWarning = localStorage.getItem(HIDE_WARNING_KEY) === 'true';
     if (shouldHideWarning) {
-        initiateDirectorySelection();
+      initiateDirectorySelection();
     } else {
-        setIsWarningModalOpen(true);
+      setIsWarningModalOpen(true);
     }
   };
 
   const handleWarningConfirm = (dontShowAgain: boolean) => {
     if (dontShowAgain) {
-        localStorage.setItem(HIDE_WARNING_KEY, 'true');
+      localStorage.setItem(HIDE_WARNING_KEY, 'true');
     }
     setIsWarningModalOpen(false);
     initiateDirectorySelection();
   };
-  
+
   const initiateDirectorySelection = async () => {
     // Reset state before starting selection
     setError(null);
@@ -206,30 +210,30 @@ export const CodeInput: React.FC<CodeInputProps> = ({
     }
   };
 
-  const handleFileSelectedFromInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelectedFromInput = async (e: any) => { // Changed React.ChangeEvent to any
     if (!e.target.files || e.target.files.length === 0) return;
 
     setIsFetchingFiles(true);
     try {
-        const localFiles = await getFilesFromInput(e.target.files);
-        setFiles(localFiles);
+      const localFiles = await getFilesFromInput(e.target.files);
+      setFiles(localFiles);
     } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        setError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(errorMessage);
     } finally {
-        setIsFetchingFiles(false);
-        if (e.target) e.target.value = ''; // Reset for next selection
+      setIsFetchingFiles(false);
+      if (e.target) e.target.value = ''; // Reset for next selection
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleFileSelect = async (e: any) => { // Changed React.ChangeEvent to any
     const filePath = e.target.value;
     if (!filePath) {
       setSelectedFile(null);
       return;
     }
 
-    const file = files.find(f => f.path === filePath);
+    const file = files.find((f: any) => f.path === filePath); // Added type for f
     if (file) {
       setError(null);
 
@@ -252,9 +256,9 @@ export const CodeInput: React.FC<CodeInputProps> = ({
         }
         const fileWithContent = { ...file, content };
         setSelectedFile(fileWithContent);
-        
+
         // Update the files array to cache the content for future use
-        setFiles(files.map(f => f.path === filePath ? fileWithContent : f));
+        setFiles(files.map((f: any) => f.path === filePath ? fileWithContent : f)); // Added type for f
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
         setError(`Failed to fetch file content: ${errorMessage}`);
@@ -264,10 +268,10 @@ export const CodeInput: React.FC<CodeInputProps> = ({
       }
     }
   };
-  
+
   const handleReviewClick = () => {
-    const languageToUse = languageOverride !== 'auto-detect' 
-      ? languageOverride 
+    const languageToUse = languageOverride !== AUTO_DETECT_LANGUAGE_KEY
+      ? languageOverride
       : selectedFile?.language.value || 'typescript'; // Fallback for pasted code
     onReview(code, languageToUse, customPrompt);
   };
@@ -279,27 +283,27 @@ export const CodeInput: React.FC<CodeInputProps> = ({
     setIsFetchingFiles(true);
     setSelectedFile(null);
     try {
-        const parsed = parseGitHubUrl(repoUrl);
-        if (!parsed) return;
+      const parsed = parseGitHubUrl(repoUrl);
+      if (!parsed) return;
 
-        // Fetch content for files that don't have it cached yet
-        const filesWithContent = await fetchFilesWithContent(parsed.owner, parsed.repo, files);
-        
-        // Update the files state with cached content for future use
-        setFiles(filesWithContent);
-        
-        // Extract only path and content for the review API
-        const filesForReview = filesWithContent
-            .filter(file => file.content !== undefined) // Only include files that loaded successfully
-            .map(file => ({ path: file.path, content: file.content! }));
+      // Fetch content for files that don't have it cached yet
+      const filesWithContent = await fetchFilesWithContent(parsed.owner, parsed.repo, files);
 
-        onRepoReview(filesForReview, repoUrl, customPrompt);
+      // Update the files state with cached content for future use
+      setFiles(filesWithContent);
+
+      // Extract only path and content for the review API
+      const filesForReview = filesWithContent
+        .filter(file => file.content !== undefined) // Only include files that loaded successfully
+        .map(file => ({ path: file.path, content: file.content! }));
+
+      onRepoReview(filesForReview, repoUrl, customPrompt);
 
     } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-        setError(`Failed to fetch repository content: ${errorMessage}`);
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+      setError(`Failed to fetch repository content: ${errorMessage}`);
     } finally {
-        setIsFetchingFiles(false);
+      setIsFetchingFiles(false);
     }
   };
 
@@ -322,81 +326,82 @@ export const CodeInput: React.FC<CodeInputProps> = ({
       <div className="p-4 space-y-4 overflow-y-auto">
         {/* GitHub URL Input */}
         <div className="flex gap-2">
-            <input
-                type="text"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                placeholder="https://github.com/owner/repo"
-                className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                disabled={isFetchingFiles}
-            />
-            <button onClick={handleFetchRepo} disabled={isFetchingFiles || !repoUrl} className="px-4 py-2 bg-indigo-600 rounded-md hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed transition-colors">
-                {isFetchingFiles ? '...' : 'Load'}
-            </button>
+          <input
+            type="text"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            placeholder="https://github.com/owner/repo"
+            className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            disabled={isFetchingFiles}
+          />
+          <button onClick={handleFetchRepo} disabled={isFetchingFiles || !repoUrl} className="px-4 py-2 bg-indigo-600 rounded-md hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed transition-colors">
+            {isFetchingFiles ? '...' : 'Load'}
+          </button>
         </div>
-        
+
         {/* Local/Paste Buttons */}
         <div className="relative flex items-center">
-            <div className="flex-grow border-t border-gray-600"></div>
-            <span className="flex-shrink mx-4 text-gray-500 text-sm">OR</span>
-            <div className="flex-grow border-t border-gray-600"></div>
+          <div className="flex-grow border-t border-gray-600"></div>
+          <span className="flex-shrink mx-4 text-gray-500 text-sm">OR</span>
+          <div className="flex-grow border-t border-gray-600"></div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-            <input
-              type="file"
-              // @ts-ignore
-              webkitdirectory="true"
-              directory="true"
-              multiple
-              ref={fileInputRef}
-              onChange={handleFileSelectedFromInput}
-              style={{ display: 'none' }}
-            />
-            <button
-                onClick={handleLocalFolderClick}
-                disabled={isFetchingFiles}
-                className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 rounded-md disabled:bg-gray-800 disabled:cursor-not-allowed transition-colors"
-                title="Select a folder from your local machine"
-            >
-                Select Local Folder
-            </button>
-            <button
-                onClick={() => setIsPasteModalOpen(true)}
-                disabled={isFetchingFiles}
-                className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 rounded-md disabled:bg-gray-800 disabled:cursor-not-allowed transition-colors"
-            >
-                Paste Code Manually
-            </button>
+          <input
+            type="file"
+            // @ts-ignore - webkitdirectory is not a standard attribute
+            webkitdirectory="true"
+            // @ts-ignore - directory is not a standard attribute
+            directory="true"
+            multiple
+            ref={fileInputRef}
+            onChange={handleFileSelectedFromInput}
+            style={{ display: 'none' }}
+          />
+          <button
+            onClick={handleLocalFolderClick}
+            disabled={isFetchingFiles}
+            className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 rounded-md disabled:bg-gray-800 disabled:cursor-not-allowed transition-colors"
+            title="Select a folder from your local machine"
+          >
+            Select Local Folder
+          </button>
+          <button
+            onClick={() => setIsPasteModalOpen(true)}
+            disabled={isFetchingFiles}
+            className="w-full py-2.5 bg-gray-700 hover:bg-gray-600 rounded-md disabled:bg-gray-800 disabled:cursor-not-allowed transition-colors"
+          >
+            Paste Code Manually
+          </button>
         </div>
 
         {/* File Selector */}
         {(files.length > 0 || isFetchingFiles) && (
           <div>
             <select
-                value={selectedFile?.path || ''}
-                onChange={handleFileSelect}
-                disabled={isFetchingFiles}
-                className="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={selectedFile?.path || ''}
+              onChange={handleFileSelect}
+              disabled={isFetchingFiles}
+              className="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-                <option value="">{isFetchingFiles ? 'Loading files...' : 'Select a file to review'}</option>
-                {files.map(file => (
-                    <option key={file.path} value={file.path}>
-                        {file.path} ({file.language.label})
-                    </option>
-                ))}
+              <option value="">{isFetchingFiles ? 'Loading files...' : 'Select a file to review'}</option>
+              {files.map((file: any) => (
+                <option key={file.path} value={file.path}>
+                  {file.path} ({file.language.label})
+                </option>
+              ))}
             </select>
 
             {repoUrl && (
               <div className="mt-4">
-                  <button
-                      onClick={handleRepoReviewClick}
-                      disabled={isLoading || isFetchingFiles || reviewModes.includes('test_generation')}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-semibold bg-purple-600 text-white rounded-md hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed transition-colors"
-                      title={reviewModes.includes('test_generation') ? "Test Generation is not available for repository-wide reviews" : "Review the entire repository"}
-                  >
-                      <SparklesIcon />
-                      Review Entire Repository
-                  </button>
+                <button
+                  onClick={handleRepoReviewClick}
+                  disabled={isLoading || isFetchingFiles || reviewModes.includes('test_generation')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-semibold bg-purple-600 text-white rounded-md hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed transition-colors"
+                  title={reviewModes.includes('test_generation') ? "Test Generation is not available for repository-wide reviews" : "Review the entire repository"}
+                >
+                  <SparklesIcon />
+                  Review Entire Repository
+                </button>
               </div>
             )}
           </div>
@@ -406,8 +411,8 @@ export const CodeInput: React.FC<CodeInputProps> = ({
 
         {/* Review Options Section */}
         <div className="border-t border-gray-700 pt-4">
-          <button 
-            onClick={() => setShowReviewOptions(prev => !prev)}
+          <button
+            onClick={() => setShowReviewOptions((prev: boolean) => !prev)}
             className="w-full flex justify-between items-center text-left text-sm font-medium text-gray-400 hover:text-gray-200"
           >
             Code Analysis Options
@@ -422,8 +427,8 @@ export const CodeInput: React.FC<CodeInputProps> = ({
 
         {/* Custom Prompt Section */}
         <div className="border-t border-gray-700 pt-4">
-          <button 
-            onClick={() => setShowCustomPrompt(prev => !prev)}
+          <button
+            onClick={() => setShowCustomPrompt((prev: boolean) => !prev)}
             className="w-full flex justify-between items-center text-left text-sm font-medium text-gray-400 hover:text-gray-200"
           >
             Custom Instructions
@@ -451,13 +456,13 @@ export const CodeInput: React.FC<CodeInputProps> = ({
           {isLoading ? 'Reviewing...' : 'Review File'}
         </button>
       </div>
-      <CodePasteModal 
+      <CodePasteModal
         isOpen={isPasteModalOpen}
         onClose={() => setIsPasteModalOpen(false)}
         onConfirm={handlePasteConfirm}
         initialCode={code}
       />
-       <LocalFolderWarningModal
+      <LocalFolderWarningModal
         isOpen={isWarningModalOpen}
         onClose={() => setIsWarningModalOpen(false)}
         onConfirm={handleWarningConfirm}

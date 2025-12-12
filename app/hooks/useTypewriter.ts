@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import React from 'react';
+// Workaround for TypeScript build issue where React types aren't resolving correctly
+const { useState, useEffect, useRef } = React as any;
 
 interface UseTypewriterOptions {
     text: string;
@@ -20,7 +22,7 @@ export const useTypewriter = ({
     const [displayedText, setDisplayedText] = useState('');
     const [isTyping, setIsTyping] = useState(true);
     const indexRef = useRef(0);
-    const directionRef = useRef<'typing' | 'deleting' | 'paused'>('typing');
+    const directionRef = useRef('typing');
 
     useEffect(() => {
         let timeoutId: number;

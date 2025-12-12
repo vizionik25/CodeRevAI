@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import * as ReactImport from 'react';
+const React: any = ReactImport;
 import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
@@ -13,11 +14,11 @@ interface Subscription {
 
 export default function BillingPage() {
   const { user, isSignedIn } = useUser();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isProcessingStripe, setIsProcessingStripe] = useState(false);
+  const [subscription, setSubscription] = React.useState(null as Subscription | null);
+  const [loading, setLoading] = React.useState(true);
+  const [isProcessingStripe, setIsProcessingStripe] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchSubscription = async () => {
       try {
         const response = await fetch('/api/subscription');

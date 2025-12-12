@@ -9,56 +9,24 @@ import {
   validateReviewModes,
 } from '@/app/utils/security';
 import { checkRateLimitRedis } from '@/app/utils/redis';
-import { PROMPT_INSTRUCTIONS } from '@/app/data/prompts';
 import { getGeminiAI } from '@/app/utils/apiClients';
+import { buildPrompt } from '@/app/services/geminiPromptService';
 import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
 
-function buildPrompt(code: string, language: string, customPrompt: string, modes: string[]): string {
-  const activeModes = modes.length > 0 ? modes : ['comprehensive'];
-  const modeLabels = activeModes.map(m => m.replace(/_/g, ' ')).join(', ');
 
-  const instructions = activeModes.map(mode => {
-      const instruction = PROMPT_INSTRUCTIONS[mode] || '';
-      return `--- INSTRUCTIONS FOR ${mode.replace(/_/g, ' ').toUpperCase()} ---\n${instruction.replace(/{language}/g, language)}`;
-  }).join('\n\n');
-
-  let prompt = `As an expert code reviewer specializing in ${modeLabels}, review the following ${language} code.
-
-Your primary instructions are below. You must follow all sets of instructions provided.
-${instructions}
-
----
-**Code to Review:**
-\`\`\`${language}
-${code}
-\`\`\`
----
-`;
-  
-  if (customPrompt && customPrompt.trim()) {
-      prompt += `
-\nIn addition to the primary analysis, please follow these specific custom instructions:
----
-${customPrompt.trim()}
----
-`;
-  }
-
-  return prompt;
-}
 
 export async function POST(req: Request) {
   // Extract request ID from headers (set by middleware)
   const requestId = req.headers.get('X-Request-ID') || `req_${Date.now()}`;
   const startTime = Date.now();
-  
+
   try {
     logger.info('Code review request started', { endpoint: '/api/review-code' }, requestId);
-    
+
     // Check authentication
     const { userId } = await auth();
-    
+
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
       logger.warn('Unauthorized review attempt', {}, requestId);
@@ -70,7 +38,7 @@ export async function POST(req: Request) {
 
     // Rate limiting - 20 requests per minute per user (fail-closed for cost protection)
     const rateLimit = await checkRateLimitRedis(`review-code:${userId}`, 20, 60000, true);
-    
+
     if (!rateLimit.allowed) {
       // Check if circuit breaker caused the rejection
       if (rateLimit.circuitOpen) {
@@ -85,7 +53,7 @@ export async function POST(req: Request) {
           { status: 503 }
         );
       }
-      
+
       const error = new AppError(
         'RATE_LIMIT_EXCEEDED',
         'Rate limit exceeded. Please try again later.',
@@ -94,7 +62,7 @@ export async function POST(req: Request) {
       );
       return NextResponse.json(
         createErrorResponse(error),
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': '20',
@@ -197,21 +165,21 @@ export async function POST(req: Request) {
     );
   } catch (error: unknown) {
     const duration = Date.now() - startTime;
-    
+
     // Convert error to proper format for logger
-    const errorInfo = error instanceof Error 
+    const errorInfo = error instanceof Error
       ? error
       : { message: 'Unknown error', error: String(error) };
-    
+
     logger.error('Error in code review API', errorInfo, requestId);
     logger.info('Request completed with error', { duration: `${duration}ms` }, requestId);
-    
-    const apiError = error instanceof AppError 
+
+    const apiError = error instanceof AppError
       ? createErrorResponse(error)
       : createErrorResponse(error, 'AI_SERVICE_ERROR');
-    
+
     const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
-    
+
     return NextResponse.json(
       apiError,
       { status: statusCode, headers: { 'X-Request-ID': requestId } }

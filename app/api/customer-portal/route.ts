@@ -48,10 +48,15 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         logger.error('Error creating customer portal session', error, requestId);
 
-        const apiError = createErrorResponse(error, 'PAYMENT_ERROR');
+        const apiError = error instanceof AppError
+            ? createErrorResponse(error)
+            : createErrorResponse(error, 'PAYMENT_ERROR');
+
+        const statusCode = error instanceof AppError && error.code === 'PAYMENT_ERROR' ? 503 : 500;
+
         return NextResponse.json(
             apiError,
-            { status: 500, headers: { 'X-Request-ID': requestId } }
+            { status: statusCode, headers: { 'X-Request-ID': requestId } }
         );
     }
 }

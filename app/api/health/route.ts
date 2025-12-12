@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const health = {
     status: 'healthy' as 'healthy' | 'degraded' | 'unhealthy',
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '2.0.0',
+    version: process.env.APP_VERSION || process.env.npm_package_version || '2.0.0',
     uptime: process.uptime(),
     checks: {
       database: {
@@ -64,11 +64,11 @@ export async function GET(request: NextRequest) {
     const redisStart = Date.now();
     const testKey = `health:${Date.now()}`;
     const redis = getRedis();
-    
+
     // Set and get a test key
     await redis.set(testKey, 'ok', { ex: 5 });
     const result = await redis.get(testKey);
-    
+
     if (result === 'ok') {
       health.checks.redis.status = 'up';
       health.checks.redis.latency = Date.now() - redisStart;
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     health.checks.redis.status = 'down';
     health.checks.redis.error = error instanceof Error ? error.message : 'Unknown error';
-    
+
     // If circuit breaker is open, this is expected
     if (circuitBreakerStatus.state === 'OPEN') {
       health.status = health.status === 'unhealthy' ? 'unhealthy' : 'degraded';
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
   // Overall status determination
   const allUp = health.checks.database.status === 'up' && health.checks.redis.status === 'up';
   const anyDown = health.checks.database.status === 'down' || health.checks.redis.status === 'down';
-  
+
   if (allUp) {
     health.status = 'healthy';
   } else if (anyDown && health.checks.database.status === 'down') {

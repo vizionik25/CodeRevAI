@@ -5,7 +5,7 @@ interface NotificationProps {
   onDismiss: () => void;
 }
 
-const Notification: React.FC<NotificationProps> = ({ message, onDismiss }) => {
+const Notification = ({ message, onDismiss }: NotificationProps) => {
   if (!message) {
     return null;
   }

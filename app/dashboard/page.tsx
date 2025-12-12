@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useCallback, useEffect } from 'react';
+import * as ReactImport from 'react';
+const React: any = ReactImport;
 import { CodeInput } from '../components/CodeInput';
 import { FeedbackDisplay } from '../components/FeedbackDisplay';
 import { Header } from '../components/Header';
@@ -11,23 +12,24 @@ import { LANGUAGES } from '@/app/data/constants';
 import { CodeFile, HistoryItem } from '@/app/types';
 import { ApiError } from '@/app/types/errors';
 import { logger } from '@/app/utils/logger';
+import { useApiErrorDisplay } from '@/app/hooks/useApiErrorDisplay';
 
 export default function HomePage() {
-  const [feedback, setFeedback] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorContext, setErrorContext] = useState<'review' | 'diff' | 'file' | 'network' | 'auth' | 'rate-limit' | undefined>(undefined);
-  const [selectedFile, setSelectedFile] = useState<CodeFile | null>(null);
-  const [code, setCode] = useState('');
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
-  const [reviewMode, setReviewMode] = useState<string[]>(['comprehensive']);
-  const [reviewType, setReviewType] = useState<'file' | 'repo'>('file');
-  const [directoryHandle, setDirectoryHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [feedback, setFeedback] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const { error, errorContext, setError, setErrorContext, displayError, clearError } = useApiErrorDisplay();
+  const [selectedFile, setSelectedFile] = React.useState(null as CodeFile | null);
+  const [code, setCode] = React.useState('');
+  const [customPrompt, setCustomPrompt] = React.useState('');
+  const [history, setHistory] = React.useState([] as HistoryItem[]);
+  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = React.useState(false);
+  const [reviewMode, setReviewMode] = React.useState(['comprehensive'] as string[]);
+  const [reviewType, setReviewType] = React.useState('file' as 'file' | 'repo');
+  const [directoryHandle, setDirectoryHandle] = React.useState(null as FileSystemDirectoryHandle | null);
 
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Load history from database on mount
     const loadHistory = async () => {
       const historyData = await getHistory();
@@ -36,16 +38,14 @@ export default function HomePage() {
     loadHistory();
   }, []);
 
-  const handleReview = useCallback(async (codeToReview: string, language: string, prompt: string) => {
+  const handleReview = React.useCallback(async (codeToReview: string, language: string, prompt: string) => {
     if (!codeToReview.trim()) {
-      setError("Cannot review empty code.");
-      setErrorContext('file');
+      displayError(new Error("Cannot review empty code."), 'file');
       return;
     }
     setIsLoading(true);
     setFeedback('');
-    setError(null);
-    setErrorContext(undefined);
+    clearError();
     setReviewType('file');
     try {
       const review = await reviewCode(codeToReview, language, prompt, reviewMode);
@@ -66,7 +66,7 @@ export default function HomePage() {
       };
 
       // Optimistic update
-      setHistory(prev => [historyItem, ...prev].slice(0, 50));
+      setHistory((prev: HistoryItem[]) => [historyItem, ...prev].slice(0, 50));
 
       await addHistoryItem(historyItem);
       // Optional: re-fetch to ensure sync, but optimistic update makes it snappy
@@ -74,53 +74,18 @@ export default function HomePage() {
       // setHistory(updatedHistory);
 
     } catch (e) {
-      let errorMessage = 'An unknown error occurred.';
-      let context: typeof errorContext = 'review';
-
-      // Handle structured AppError from services
-      if (e && typeof e === 'object' && 'code' in e) {
-        const apiError = e as ApiError;
-        errorMessage = apiError.message;
-
-        // Map error codes to contexts for better user feedback
-        switch (apiError.code) {
-          case 'RATE_LIMIT_EXCEEDED':
-            context = 'rate-limit';
-            break;
-          case 'UNAUTHORIZED':
-            context = 'auth';
-            break;
-          case 'FILE_TOO_LARGE':
-          case 'INVALID_INPUT':
-            context = 'file';
-            break;
-          case 'AI_SERVICE_ERROR':
-          case 'SERVICE_UNAVAILABLE':
-          case 'INTERNAL_ERROR':
-            context = 'network';
-            break;
-          default:
-            context = 'review';
-        }
-      } else if (e instanceof Error) {
-        // Fallback for unexpected non-AppError errors (shouldn't happen normally)
-        errorMessage = e.message;
-        context = 'review';
-      }
-
-      setError(`Failed to get review: ${errorMessage}`);
-      setErrorContext(context);
-      logger.error('Review error:', e);
+      displayError(e, 'review', 'Failed to get review:');
     } finally {
       setIsLoading(false);
     }
   }, [selectedFile, reviewMode]);
 
-  const handleRepoReview = useCallback(async (filesWithContent: { path: string, content: string }[], repoUrl: string, prompt: string) => {
+  const handleRepoReview = React.useCallback(async (filesWithContent: { path: string, content: string }[], repoUrl: string, prompt: string) => {
     setIsLoading(true);
     setFeedback('');
-    setError(null);
-    setErrorContext(undefined);
+    setIsLoading(true);
+    setFeedback('');
+    clearError();
     setReviewType('repo');
     setSelectedFile(null);
     setCode('');
@@ -140,51 +105,14 @@ export default function HomePage() {
       };
 
       // Optimistic update
-      setHistory(prev => [historyItem, ...prev].slice(0, 50));
+      setHistory((prev: HistoryItem[]) => [historyItem, ...prev].slice(0, 50));
 
       await addHistoryItem(historyItem);
       // const updatedHistory = await getHistory();
       // setHistory(updatedHistory);
 
     } catch (e) {
-      let errorMessage = 'An unknown error occurred.';
-      let context: typeof errorContext = 'review';
-
-      // Handle structured AppError from services
-      if (e && typeof e === 'object' && 'code' in e) {
-        const apiError = e as ApiError;
-        errorMessage = apiError.message;
-
-        // Map error codes to contexts for better user feedback
-        switch (apiError.code) {
-          case 'RATE_LIMIT_EXCEEDED':
-            context = 'rate-limit';
-            break;
-          case 'UNAUTHORIZED':
-            context = 'auth';
-            break;
-          case 'REPO_TOO_LARGE':
-          case 'INVALID_INPUT':
-            context = 'file';
-            break;
-          case 'GITHUB_API_ERROR':
-          case 'AI_SERVICE_ERROR':
-          case 'SERVICE_UNAVAILABLE':
-          case 'INTERNAL_ERROR':
-            context = 'network';
-            break;
-          default:
-            context = 'review';
-        }
-      } else if (e instanceof Error) {
-        // Fallback for unexpected non-AppError errors (shouldn't happen normally)
-        errorMessage = e.message;
-        context = 'review';
-      }
-
-      setError(`Failed to get review: ${errorMessage}`);
-      setErrorContext(context);
-      logger.error('Repository review error:', e);
+      displayError(e, 'review', 'Failed to get review:');
     } finally {
       setIsLoading(false);
     }
@@ -219,8 +147,8 @@ export default function HomePage() {
 
   return (
     <div className="bg-gray-900 min-h-screen text-gray-200 font-sans">
-      <Header onToggleHistory={() => setIsHistoryPanelOpen(prev => !prev)} />
-      <Notification message={error} onDismiss={() => setError(null)} />
+      <Header onToggleHistory={() => setIsHistoryPanelOpen((prev: boolean) => !prev)} />
+      <Notification message={error} onDismiss={clearError} />
       <HistoryPanel
         isOpen={isHistoryPanelOpen}
         onClose={() => setIsHistoryPanelOpen(false)}

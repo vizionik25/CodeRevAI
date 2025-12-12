@@ -1,11 +1,14 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 
+// Workaround for TypeScript build issue where React types aren't resolving correctly
+const { useState, useEffect, Suspense, lazy } = React as any;
+
 // Lazy load heavy components
-const ReactDiffViewer = React.lazy(() => import('react-diff-viewer-continued'));
-const SyntaxHighlighter = React.lazy(() => import('react-syntax-highlighter').then(mod => ({ default: mod.Prism })));
+const ReactDiffViewer = lazy(() => import('react-diff-viewer-continued'));
+const SyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(mod => ({ default: mod.Prism })));
 import { LoadingState } from './LoadingState';
 import { ErrorMessage } from './ErrorMessage';
 import { LoaderIcon } from './icons/LoaderIcon';
@@ -34,13 +37,13 @@ const Placeholder = () => (
   </div>
 );
 
-const DownloadIcon: React.FC = () => (
+const DownloadIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
   </svg>
 );
 
-const SaveIcon: React.FC = () => (
+const SaveIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
     <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
   </svg>
@@ -49,9 +52,9 @@ const SaveIcon: React.FC = () => (
 
 type ViewMode = 'review' | 'diff';
 
-export const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ feedback, isLoading, selectedFile, originalCode, setError, reviewType, directoryHandle }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('review');
-  const [diffCode, setDiffCode] = useState<string | null>(null);
+export const FeedbackDisplay = ({ feedback, isLoading, selectedFile, originalCode, setError, reviewType, directoryHandle }: FeedbackDisplayProps) => {
+  const [viewMode, setViewMode] = useState('review');
+  const [diffCode, setDiffCode] = useState(null);
   const [isGeneratingDiff, setIsGeneratingDiff] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 

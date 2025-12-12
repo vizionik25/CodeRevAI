@@ -13,6 +13,23 @@ const webhookSecret = serverEnv.STRIPE_WEBHOOK_SECRET;
  * Map Stripe Price ID to internal plan name
  * This ensures consistent plan assignment across all subscription events
  */
+// Helper type to handle potentially missing properties in Stripe objects without 'any'
+type StripeSessionWithLineItems = {
+  line_items?: {
+    data: Array<{
+      price?: {
+        id: string;
+      };
+    }>;
+  };
+};
+
+// Type for Stripe Subscription with period fields (they're numeric timestamps)
+type StripeSubscriptionWithPeriods = Stripe.Subscription & {
+  current_period_start: number;
+  current_period_end: number;
+};
+
 function getPlanFromPriceId(priceId: string | null | undefined): string {
   if (!priceId) return 'free';
 
@@ -84,7 +101,9 @@ export async function POST(req: NextRequest) {
 
         if (userId && plan && session.customer && session.subscription) {
           // Get price ID from line items to ensure accurate plan mapping
-          const priceId = (session as any).line_items?.data[0]?.price?.id || null;
+          // Cast to unknown first to avoid intersection conflicts, then to our helper shape
+          const sessionWithItems = session as unknown as StripeSessionWithLineItems;
+          const priceId = sessionWithItems.line_items?.data[0]?.price?.id || null;
           const actualPlan = priceId ? getPlanFromPriceId(priceId) : plan;
 
           // Store subscription in database
@@ -127,7 +146,6 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
-        const subData = subscription as any;
         logger.info('Subscription created', { subscriptionId: subscription.id }, requestId);
 
         // Idempotency check: verify subscription hasn't already been processed
@@ -158,9 +176,9 @@ export async function POST(req: NextRequest) {
               stripePriceId: priceId,
               status: subscription.status,
               plan: newPlan,
-              currentPeriodStart: subData.current_period_start ? new Date(subData.current_period_start * 1000) : null,
-              currentPeriodEnd: subData.current_period_end ? new Date(subData.current_period_end * 1000) : null,
-              cancelAtPeriodEnd: subData.cancel_at_period_end || false,
+              currentPeriodStart: new Date((subscription as StripeSubscriptionWithPeriods).current_period_start * 1000),
+              currentPeriodEnd: new Date((subscription as StripeSubscriptionWithPeriods).current_period_end * 1000),
+              cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
               updatedAt: new Date(),
             },
           });
@@ -181,7 +199,7 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        const subData = subscription as any; // Stripe SDK types are incomplete
+
         logger.info('Subscription updated', {
           subscriptionId: subscription.id,
           customerId: subscription.customer,
@@ -204,9 +222,9 @@ export async function POST(req: NextRequest) {
               stripePriceId: priceId,
               status: subscription.status,
               plan: newPlan,
-              currentPeriodStart: subData.current_period_start ? new Date(subData.current_period_start * 1000) : null,
-              currentPeriodEnd: subData.current_period_end ? new Date(subData.current_period_end * 1000) : null,
-              cancelAtPeriodEnd: subData.cancel_at_period_end || false,
+              currentPeriodStart: new Date((subscription as StripeSubscriptionWithPeriods).current_period_start * 1000),
+              currentPeriodEnd: new Date((subscription as StripeSubscriptionWithPeriods).current_period_end * 1000),
+              cancelAtPeriodEnd: subscription.cancel_at_period_end || false,
               updatedAt: new Date(),
             },
           });
@@ -267,24 +285,25 @@ export async function POST(req: NextRequest) {
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        const invoiceData = invoice as any; // Stripe SDK types may be incomplete
+        // Use type assertion to access properties that might be missing in older API versions
+        const invoiceWithSub = invoice as unknown as { subscription: string, lines: { data: Array<{ price?: { id: string } }> } };
+
         logger.info('Invoice payment succeeded', {
           invoiceId: invoice.id,
           customerId: invoice.customer,
           amount: invoice.amount_paid,
-          subscription: invoiceData.subscription
+          subscription: invoiceWithSub.subscription
         }, requestId);
 
         // Find user subscription
-        if (invoice.customer && invoiceData.subscription) {
+        if (invoice.customer && invoiceWithSub.subscription) {
           const userSub = await prisma.userSubscription.findUnique({
             where: { stripeCustomerId: invoice.customer as string },
           });
 
           if (userSub) {
             // Get plan from invoice line items
-            // Type assertion needed as Stripe SDK types are incomplete
-            const priceId = (invoice.lines.data[0] as any)?.price?.id || null;
+            const priceId = invoiceWithSub.lines.data[0]?.price?.id || null;
             const newPlan = getPlanFromPriceId(priceId);
 
             // Ensure subscription is active after successful payment
@@ -304,7 +323,7 @@ export async function POST(req: NextRequest) {
               publicMetadata: { plan: newPlan },
             });
 
-            logger.info(`Payment succeeded for user ${userSub.userId}, subscription ${invoiceData.subscription}`, { plan: newPlan, priceId }, requestId);
+            logger.info(`Payment succeeded for user ${userSub.userId}, subscription ${invoiceWithSub.subscription}`, { plan: newPlan, priceId }, requestId);
           }
         }
 
@@ -313,12 +332,14 @@ export async function POST(req: NextRequest) {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        const invoiceData = invoice as any;
+        // Use type assertion to access properties that might be missing in older API versions
+        const invoiceWithSub = invoice as unknown as { subscription: string };
+
         logger.warn('Invoice payment failed', {
           invoiceId: invoice.id,
           customerId: invoice.customer,
           amount: invoice.amount_due,
-          subscription: invoiceData.subscription
+          subscription: invoiceWithSub.subscription
         }, requestId);
 
         // Find user subscription and update status

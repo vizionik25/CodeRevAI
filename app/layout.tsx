@@ -14,7 +14,7 @@ if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-productio
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: any;
 }) {
   return (
     <ClerkProvider>

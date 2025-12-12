@@ -1,5 +1,6 @@
-"use client";
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
+// Workaround for TypeScript build issue where React types aren't resolving correctly
+const { useState, useRef, useEffect } = React as any;
 
 const SAMPLE_CODE = `// Welcome to CodeRevAI
 function greet(name) {
@@ -16,11 +17,11 @@ for (let i = 0; i < 5; i++) {
 }
 `;
 
-export const BackgroundCodeScene: React.FC = () => {
+export const BackgroundCodeScene = () => {
   const [text, setText] = useState('');
   const indexRef = useRef(0);
   const directionRef = useRef(1); // 1 typing, -1 deleting
-  const timeoutRef = useRef<number | null>(null);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     // typing loop

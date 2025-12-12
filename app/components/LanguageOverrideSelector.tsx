@@ -6,7 +6,7 @@ interface LanguageOverrideSelectorProps {
   onChange: (value: string) => void;
 }
 
-export const LanguageOverrideSelector: React.FC<LanguageOverrideSelectorProps> = ({ value, onChange }) => {
+export const LanguageOverrideSelector = ({ value, onChange }: LanguageOverrideSelectorProps) => {
   return (
     <div className="mb-4">
       <label htmlFor="language-override" className="block text-sm font-medium text-gray-400 mb-2">
@@ -25,8 +25,8 @@ export const LanguageOverrideSelector: React.FC<LanguageOverrideSelectorProps> =
           </option>
         ))}
       </select>
-      { value === 'auto-detect' && (
-          <p className="text-xs text-gray-500 mt-1.5 px-1">Language will be determined by file extension.</p>
+      {value === 'auto-detect' && (
+        <p className="text-xs text-gray-500 mt-1.5 px-1">Language will be determined by file extension.</p>
       )}
     </div>
   );

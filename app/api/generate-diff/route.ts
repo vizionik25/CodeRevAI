@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     logger.info('Generate diff request started', { endpoint: '/api/generate-diff' }, requestId);
     // Check authentication
     const { userId } = await auth();
-    
+
     if (!userId) {
       const error = new AppError('UNAUTHORIZED', 'Authentication required');
       logger.warn('Unauthorized generate diff attempt', {}, requestId);
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     // Rate limiting - 15 requests per minute per user (fail-closed for cost protection)
     const rateLimit = await checkRateLimitRedis(`generate-diff:${userId}`, 15, 60000, true);
-    
+
     if (!rateLimit.allowed) {
       // Check if circuit breaker caused the rejection
       if (rateLimit.circuitOpen) {
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
           { status: 503, headers: { 'X-Request-ID': requestId } }
         );
       }
-      
+
       const error = new AppError(
         'RATE_LIMIT_EXCEEDED',
         'Rate limit exceeded. Please try again later.',
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       );
       return NextResponse.json(
         createErrorResponse(error),
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': '15',
@@ -143,7 +143,7 @@ Return the complete, refactored code now.
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    
+
     const aiDuration = Date.now() - aiStartTime;
     let modifiedCode = response.text || '';
 
@@ -176,16 +176,19 @@ Return the complete, refactored code now.
     );
   } catch (error: unknown) {
     const duration = Date.now() - startTime;
-    const errorInfo = error instanceof Error 
+    const errorInfo = error instanceof Error
       ? error
       : { message: 'Unknown error', error: String(error) };
 
     logger.error('Error in generate diff API', errorInfo, requestId);
     logger.info('Request completed with error', { duration: `${duration}ms` }, requestId);
-    
-    const apiError = createErrorResponse(error, 'AI_SERVICE_ERROR');
+
+    const apiError = error instanceof AppError
+      ? createErrorResponse(error)
+      : createErrorResponse(error, 'AI_SERVICE_ERROR');
+
     const statusCode = error instanceof AppError && error.code === 'AI_SERVICE_ERROR' ? 503 : 500;
-    
+
     return NextResponse.json(
       apiError,
       { status: statusCode, headers: { 'X-Request-ID': requestId } }

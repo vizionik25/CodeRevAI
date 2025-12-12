@@ -2,25 +2,25 @@ import React from 'react';
 import { HistoryItem } from '@/app/types';
 
 interface HistoryPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  history: HistoryItem[];
-  onSelect: (item: HistoryItem) => void;
-  onClear: () => void;
+    isOpen: boolean;
+    onClose: () => void;
+    history: HistoryItem[];
+    onSelect: (item: HistoryItem) => void;
+    onClear: () => void;
 }
 
-export const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, history, onSelect, onClear }) => {
+export const HistoryPanel = ({ isOpen, onClose, history, onSelect, onClear }: HistoryPanelProps) => {
     if (!isOpen) {
         return null;
     }
 
     return (
-        <div 
-            className="fixed inset-0 bg-black/60 z-40" 
+        <div
+            className="fixed inset-0 bg-black/60 z-40"
             onClick={onClose}
             aria-hidden="true"
         >
-            <div 
+            <div
                 className="fixed top-0 right-0 h-full w-full max-w-md bg-gray-800 shadow-xl z-50 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -43,7 +43,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, his
                         <ul>
                             {history.map((item) => (
                                 <li key={item.id} className="border-b border-gray-700">
-                                    <button 
+                                    <button
                                         onClick={() => onSelect(item)}
                                         className="w-full text-left p-4 hover:bg-gray-700/50 transition-colors"
                                     >
@@ -51,7 +51,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, his
                                         <div className="flex items-center flex-wrap gap-2 mt-1">
                                             <p className="text-sm text-gray-400">{item.language}</p>
                                             {(item.mode || ['comprehensive']).map(mode => (
-                                                 <span key={mode} className="px-2 py-0.5 text-xs font-medium bg-indigo-900 text-indigo-300 rounded-full capitalize">
+                                                <span key={mode} className="px-2 py-0.5 text-xs font-medium bg-indigo-900 text-indigo-300 rounded-full capitalize">
                                                     {mode.replace(/_/g, ' ')}
                                                 </span>
                                             ))}
@@ -67,7 +67,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, his
                 </div>
 
                 {history.length > 0 && (
-                     <div className="p-4 border-t border-gray-700">
+                    <div className="p-4 border-t border-gray-700">
                         <button
                             onClick={onClear}
                             className="w-full py-2 bg-red-800 hover:bg-red-700 text-white rounded-md transition-colors"

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+// Workaround for TypeScript build issue where React types aren't resolving correctly
+const { useState } = React as any;
 
 interface LocalFolderWarningModalProps {
   isOpen: boolean;
@@ -6,7 +8,7 @@ interface LocalFolderWarningModalProps {
   onConfirm: (dontShowAgain: boolean) => void;
 }
 
-export const LocalFolderWarningModal: React.FC<LocalFolderWarningModalProps> = ({ isOpen, onClose, onConfirm }) => {
+export const LocalFolderWarningModal = ({ isOpen, onClose, onConfirm }: LocalFolderWarningModalProps) => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
@@ -20,7 +22,7 @@ export const LocalFolderWarningModal: React.FC<LocalFolderWarningModalProps> = (
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose} aria-modal="true" role="dialog">
-      <div 
+      <div
         className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
       >

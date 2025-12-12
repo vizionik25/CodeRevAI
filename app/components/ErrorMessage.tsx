@@ -77,7 +77,7 @@ function detectErrorContext(error: string): string {
   return 'review';
 }
 
-export const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, context }) => {
+export const ErrorMessage = ({ error, context }: ErrorMessageProps) => {
   const detectedContext = context || detectErrorContext(error);
   const solution = ERROR_SOLUTIONS[detectedContext] || ERROR_SOLUTIONS.review;
 

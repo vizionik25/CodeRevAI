@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { LoaderIcon } from './icons/LoaderIcon';
+
+// Workaround for TypeScript build issue where React types aren't resolving correctly
+const { useState, useEffect } = React as any;
 
 interface LoadingStateProps {
   message?: string;
@@ -23,11 +26,11 @@ const DIFF_STEPS = [
   { message: 'Validating changes...', minTime: 4000 },
 ];
 
-export const LoadingState: React.FC<LoadingStateProps> = ({ 
-  message, 
+export const LoadingState = ({
+  message,
   showProgress = true,
-  type = 'review' 
-}) => {
+  type = 'review'
+}: LoadingStateProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [startTime] = useState(Date.now());
 
@@ -38,7 +41,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      
+
       // Progress through steps based on elapsed time
       for (let i = 0; i < steps.length; i++) {
         if (elapsed < steps[i].minTime) {
@@ -46,7 +49,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           break;
         }
       }
-      
+
       // Stay on last step if we've exceeded all time thresholds
       if (elapsed >= steps[steps.length - 1].minTime) {
         setCurrentStep(steps.length - 1);
@@ -68,9 +71,8 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
                 {steps.map((_, index) => (
                   <div
                     key={index}
-                    className={`h-1 w-8 rounded-full transition-all duration-300 ${
-                      index <= currentStep ? 'bg-indigo-500' : 'bg-gray-700'
-                    }`}
+                    className={`h-1 w-8 rounded-full transition-all duration-300 ${index <= currentStep ? 'bg-indigo-500' : 'bg-gray-700'
+                      }`}
                   />
                 ))}
               </div>
@@ -83,7 +85,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           <span className="text-lg font-medium">
             {message || (showProgress ? steps[currentStep].message : 'Processing...')}
           </span>
-          
+
           {showProgress && type === 'review' && (
             <p className="text-sm text-gray-500">
               This may take 10-30 seconds depending on code complexity
