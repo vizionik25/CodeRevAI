@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org/)
 [![Deployed on Cloud Run](https://img.shields.io/badge/Deployed-Cloud%20Run-blue)](https://cloud.google.com/run)
 
-**Production-ready AI-powered code review platform** with enterprise-grade error handling, observability, and security features. Built with Next.js 15, Google Gemini AI, and deployed on Google Cloud Run.
+**Production-ready AI-powered code review platform** with enterprise-grade error handling, observability, and security features. Built with Next.js 15, Google Gemini AI, and deployed on Vercel with options to deploy to Google Cloud Run.
 
 🌐 **Live Demo:** [https://coderevai.vizionikmedia.com](https://coderevai.vizionikmedia.com)
 
