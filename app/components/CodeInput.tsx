@@ -10,6 +10,13 @@ import { ReviewModeSelector } from './ReviewModeSelector';
 import { LocalFolderWarningModal } from './LocalFolderWarningModal';
 import { AUTO_DETECT_LANGUAGE_KEY } from '@/app/data/constants';
 
+declare module 'react' {
+  interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
+    webkitdirectory?: string;
+    directory?: string;
+  }
+}
+
 // Workaround for TypeScript build issue where React types aren't resolving correctly
 const { useState, useEffect, useRef } = React as any;
 
@@ -348,10 +355,10 @@ export const CodeInput = ({
         <div className="grid grid-cols-2 gap-2">
           <input
             type="file"
-            // @ts-ignore - webkitdirectory is not a standard attribute
-            webkitdirectory="true"
-            // @ts-ignore - directory is not a standard attribute
-            directory="true"
+            // @ts-ignore
+            webkitdirectory=""
+            // @ts-ignore
+            directory=""
             multiple
             ref={fileInputRef}
             onChange={handleFileSelectedFromInput}

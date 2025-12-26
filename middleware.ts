@@ -2,11 +2,11 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 const isPublicRoute = createRouteMatcher([
-  '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/health',  // Health check endpoint should be public for monitoring
   '/api/webhooks/stripe',  // Stripe webhooks need to be public
+  '/api/(.*)', // Allow all API routes to bypass Clerk (we handle auth manually)
 ]);
 
 /**
@@ -19,20 +19,20 @@ function generateRequestId(): string {
 export default clerkMiddleware(async (auth, request) => {
   // Generate request ID for tracing
   const requestId = generateRequestId();
-  
+
   // Protect non-public routes
   if (!isPublicRoute(request)) {
     await auth.protect();
   }
-  
+
   // Clone the response and add request ID header
   const response = NextResponse.next();
   response.headers.set('X-Request-ID', requestId);
-  
+
   // Add request ID to request headers for API routes to access
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('X-Request-ID', requestId);
-  
+
   return response;
 });
 

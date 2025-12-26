@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authenticateApiRequest } from '@/app/lib/auth';
 import {
   sanitizeInput,
   sanitizeForAIPrompt,
@@ -9,8 +9,7 @@ import {
   validateReviewModes,
 } from '@/app/utils/security';
 import { checkRateLimitRedis } from '@/app/utils/redis';
-import { getGeminiAI } from '@/app/utils/apiClients';
-import { buildPrompt } from '@/app/services/geminiPromptService';
+import { generateCodeReview } from '@/app/services/serverGeminiService';
 import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
 
@@ -24,17 +23,8 @@ export async function POST(req: Request) {
   try {
     logger.info('Code review request started', { endpoint: '/api/review-code' }, requestId);
 
-    // Check authentication
-    const { userId } = await auth();
-
-    if (!userId) {
-      const error = new AppError('UNAUTHORIZED', 'Authentication required');
-      logger.warn('Unauthorized review attempt', {}, requestId);
-      return NextResponse.json(
-        createErrorResponse(error),
-        { status: 401, headers: { 'X-Request-ID': requestId } }
-      );
-    }
+    // Check authentication (supports both Clerk and API Key)
+    const userId = await authenticateApiRequest(req);
 
     // Rate limiting - 20 requests per minute per user (fail-closed for cost protection)
     const rateLimit = await checkRateLimitRedis(`review-code:${userId}`, 20, 60000, true);
@@ -118,25 +108,13 @@ export async function POST(req: Request) {
     const sanitizedLanguage = sanitizeInput(language);
     const sanitizedPrompt = customPrompt ? sanitizeForAIPrompt(customPrompt) : '';
 
-    // Build prompt with sanitized inputs
-    const prompt = buildPrompt(
+    // Call Gemini AI using the new service
+    const { feedback, aiDuration } = await generateCodeReview(
       sanitizedCode,
       sanitizedLanguage,
       sanitizedPrompt,
       reviewModes || ['comprehensive']
     );
-
-    // Call Gemini AI
-    const aiStartTime = Date.now();
-    const aiInstance = getGeminiAI();
-
-    const response = await aiInstance.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-
-    const aiDuration = Date.now() - aiStartTime;
-    const feedback = response.text || '';
 
     // Log AI usage metrics
     logger.info('AI request completed', {

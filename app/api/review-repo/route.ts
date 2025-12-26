@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authenticateApiRequest } from '@/app/lib/auth';
 import {
   sanitizeInput,
   sanitizeForAIPrompt,
@@ -10,8 +10,7 @@ import {
   filterSensitiveFiles,
 } from '@/app/utils/security';
 import { checkRateLimitRedis } from '@/app/utils/redis';
-import { getGeminiAI } from '@/app/utils/apiClients';
-import { buildRepoPrompt } from '@/app/services/geminiPromptService';
+import { generateRepoReview } from '@/app/services/serverGeminiService';
 import { FILE_SIZE_LIMITS } from '@/app/data/constants';
 import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
@@ -24,17 +23,8 @@ export async function POST(req: Request) {
 
   try {
     logger.info('Repo review request started', { endpoint: '/api/review-repo' }, requestId);
-    // Check authentication
-    const { userId } = await auth();
-
-    if (!userId) {
-      const error = new AppError('UNAUTHORIZED', 'Authentication required');
-      logger.warn('Unauthorized repo review attempt', {}, requestId);
-      return NextResponse.json(
-        createErrorResponse(error),
-        { status: 401, headers: { 'X-Request-ID': requestId } }
-      );
-    }
+    // Check authentication (supports both Clerk and API Key)
+    const userId = await authenticateApiRequest(req);
 
     // Rate limiting - 5 requests per minute for repo reviews (more intensive, fail-closed)
     const rateLimit = await checkRateLimitRedis(`review-repo:${userId}`, 5, 60000, true);
@@ -148,25 +138,13 @@ export async function POST(req: Request) {
     const sanitizedPrompt = customPrompt ? sanitizeForAIPrompt(customPrompt) : '';
     const sanitizedRepoUrl = sanitizeInput(repoUrl);
 
-    // Build prompt
-    const prompt = buildRepoPrompt(
+    // Call Gemini AI using the new service
+    const { feedback, aiDuration } = await generateRepoReview(
       sanitizedFiles,
       sanitizedRepoUrl,
       sanitizedPrompt,
       reviewModes || ['comprehensive']
     );
-
-    // Call Gemini AI
-    const aiStartTime = Date.now();
-    const aiInstance = getGeminiAI();
-
-    const response = await aiInstance.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-
-    const aiDuration = Date.now() - aiStartTime;
-    const feedback = response.text || '';
 
     logger.info('AI repo request completed', {
       model: 'gemini-2.5-flash',

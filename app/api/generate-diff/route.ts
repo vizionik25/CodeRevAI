@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { authenticateApiRequest } from '@/app/lib/auth';
 import {
   sanitizeInput,
   validateCodeInput,
@@ -18,17 +18,8 @@ export async function POST(req: Request) {
 
   try {
     logger.info('Generate diff request started', { endpoint: '/api/generate-diff' }, requestId);
-    // Check authentication
-    const { userId } = await auth();
-
-    if (!userId) {
-      const error = new AppError('UNAUTHORIZED', 'Authentication required');
-      logger.warn('Unauthorized generate diff attempt', {}, requestId);
-      return NextResponse.json(
-        createErrorResponse(error),
-        { status: 401, headers: { 'X-Request-ID': requestId } }
-      );
-    }
+    // Check authentication (supports both Clerk and API Key)
+    const userId = await authenticateApiRequest(req);
 
     // Rate limiting - 15 requests per minute per user (fail-closed for cost protection)
     const rateLimit = await checkRateLimitRedis(`generate-diff:${userId}`, 15, 60000, true);

@@ -30,6 +30,22 @@ type StripeSubscriptionWithPeriods = Stripe.Subscription & {
   current_period_end: number;
 };
 
+// Type for Invoice with subscription string (which can be expanded object in some API versions/configurations)
+type StripeInvoiceWithSubscription = Stripe.Invoice & {
+  subscription: string;
+  lines: {
+    data: Array<{
+      price?: {
+        id: string;
+      };
+    }>;
+  };
+};
+
+type StripeInvoiceWithSubscriptionId = Stripe.Invoice & {
+  subscription: string;
+};
+
 function getPlanFromPriceId(priceId: string | null | undefined): string {
   if (!priceId) return 'free';
 
@@ -286,7 +302,7 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         // Use type assertion to access properties that might be missing in older API versions
-        const invoiceWithSub = invoice as unknown as { subscription: string, lines: { data: Array<{ price?: { id: string } }> } };
+        const invoiceWithSub = invoice as unknown as StripeInvoiceWithSubscription;
 
         logger.info('Invoice payment succeeded', {
           invoiceId: invoice.id,
@@ -333,7 +349,7 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         // Use type assertion to access properties that might be missing in older API versions
-        const invoiceWithSub = invoice as unknown as { subscription: string };
+        const invoiceWithSub = invoice as unknown as StripeInvoiceWithSubscriptionId;
 
         logger.warn('Invoice payment failed', {
           invoiceId: invoice.id,

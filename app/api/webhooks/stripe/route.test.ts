@@ -3,11 +3,22 @@ import { NextRequest } from 'next/server';
 import { POST } from './route';
 import Stripe from 'stripe';
 
+const mocks = vi.hoisted(() => ({
+    constructEvent: vi.fn(),
+    sessionCreate: vi.fn(),
+    clerkUpdateMetadata: vi.fn(),
+}));
+
 // Mock dependencies
 vi.mock('@/app/utils/apiClients', () => ({
     getStripe: vi.fn(() => ({
         webhooks: {
-            constructEvent: vi.fn(),
+            constructEvent: mocks.constructEvent,
+        },
+        billingPortal: {
+            sessions: {
+                create: mocks.sessionCreate,
+            },
         },
     })),
 }));
@@ -25,7 +36,7 @@ vi.mock('@/app/lib/prisma', () => ({
 vi.mock('@clerk/nextjs/server', () => ({
     clerkClient: vi.fn(() => Promise.resolve({
         users: {
-            updateUserMetadata: vi.fn(),
+            updateUserMetadata: mocks.clerkUpdateMetadata,
         },
     })),
 }));
@@ -51,13 +62,11 @@ import { prisma } from '@/app/lib/prisma';
 import { clerkClient } from '@clerk/nextjs/server';
 
 describe('Stripe Webhook Handler', () => {
-    let mockStripe: any;
     let mockPrisma: any;
     let mockClerk: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockStripe = getStripe();
         mockPrisma = prisma;
         mockClerk = clerkClient;
     });
@@ -93,7 +102,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.upsert.mockResolvedValue({});
 
             const mockClerkInstance = await mockClerk();
@@ -121,7 +130,7 @@ describe('Stripe Webhook Handler', () => {
                     status: 'active',
                 }),
             });
-            expect(mockClerkInstance.users.updateUserMetadata).toHaveBeenCalledWith('user_123', {
+            expect(mocks.clerkUpdateMetadata).toHaveBeenCalledWith('user_123', {
                 publicMetadata: { plan: 'pro' },
             });
         });
@@ -141,7 +150,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
 
             const req = createMockRequest(JSON.stringify(mockEvent));
             const response = await POST(req);
@@ -178,7 +187,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
 
             // First findUnique for idempotency check
             mockPrisma.userSubscription.findUnique
@@ -224,7 +233,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as unknown as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.findUnique.mockResolvedValueOnce({
                 id: 1,
                 stripeSubscriptionId: 'sub_test_123',
@@ -265,7 +274,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as unknown as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.findUnique.mockResolvedValue({
                 id: 1,
                 userId: 'user_123',
@@ -280,7 +289,7 @@ describe('Stripe Webhook Handler', () => {
 
             expect(response.status).toBe(200);
             expect(mockPrisma.userSubscription.update).toHaveBeenCalled();
-            expect(mockClerkInstance.users.updateUserMetadata).toHaveBeenCalledWith('user_123', {
+            expect(mocks.clerkUpdateMetadata).toHaveBeenCalledWith('user_123', {
                 publicMetadata: { plan: 'pro' },
             });
         });
@@ -300,7 +309,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as unknown as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.findUnique.mockResolvedValue({
                 id: 1,
                 userId: 'user_123',
@@ -321,7 +330,7 @@ describe('Stripe Webhook Handler', () => {
                     plan: 'free',
                 }),
             });
-            expect(mockClerkInstance.users.updateUserMetadata).toHaveBeenCalledWith('user_123', {
+            expect(mocks.clerkUpdateMetadata).toHaveBeenCalledWith('user_123', {
                 publicMetadata: { plan: 'free' },
             });
         });
@@ -352,7 +361,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as unknown as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.findUnique.mockResolvedValue({
                 id: 1,
                 userId: 'user_123',
@@ -392,7 +401,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as unknown as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.findUnique.mockResolvedValue({
                 id: 1,
                 userId: 'user_123',
@@ -420,11 +429,11 @@ describe('Stripe Webhook Handler', () => {
             const data = await response.json();
 
             expect(response.status).toBe(400);
-            expect(data.error).toBeDefined();
+            expect(data.code).toBeDefined();
         });
 
         it('should return 400 for invalid signature', async () => {
-            mockStripe.webhooks.constructEvent.mockImplementation(() => {
+            mocks.constructEvent.mockImplementation(() => {
                 throw new Error('Invalid signature');
             });
 
@@ -452,7 +461,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
             mockPrisma.userSubscription.upsert.mockRejectedValue(new Error('Database error'));
 
             const req = createMockRequest(JSON.stringify(mockEvent));
@@ -469,7 +478,7 @@ describe('Stripe Webhook Handler', () => {
                 },
             } as Stripe.Event;
 
-            mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+            mocks.constructEvent.mockReturnValue(mockEvent);
 
             const req = createMockRequest(JSON.stringify(mockEvent));
             const response = await POST(req);

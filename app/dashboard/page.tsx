@@ -4,10 +4,11 @@ const React: any = ReactImport;
 import { CodeInput } from '../components/CodeInput';
 import { FeedbackDisplay } from '../components/FeedbackDisplay';
 import { Header } from '../components/Header';
+import ApiKeyManager from '../components/ApiKeyManager';
 import Notification from '../components/Notification';
 import { HistoryPanel } from '../components/HistoryPanel';
-import { reviewCode, reviewRepository } from '../services/clientGeminiService';
-import { getHistory, addHistoryItem, clearHistory } from '../services/clientHistoryService';
+import { reviewCode, reviewRepository } from '../services/geminiApiService';
+import { getHistory, addHistoryItem, clearHistory } from '../services/historyApiService';
 import { LANGUAGES } from '@/app/data/constants';
 import { CodeFile, HistoryItem } from '@/app/types';
 import { ApiError } from '@/app/types/errors';
@@ -187,6 +188,11 @@ export default function HomePage() {
               directoryHandle={directoryHandle}
             />
           </div>
+        </div>
+
+        {/* API Key Management Section */}
+        <div className="mt-12 mb-8">
+          <ApiKeyManager />
         </div>
       </main>
     </div>

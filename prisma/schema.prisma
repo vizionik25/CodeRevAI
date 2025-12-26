@@ -73,3 +73,18 @@ model ApiUsage {
   @@index([userId, timestamp])
   @@index([endpoint, timestamp])
 }
+
+// API Key model for external integrations
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String   // Clerk user ID
+  keyHash     String   @unique
+  name        String
+  lastUsed    DateTime?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime? // Optional expiration
+  isActive    Boolean  @default(true)
+
+  @@index([userId])
+  @@index([keyHash])
+}
