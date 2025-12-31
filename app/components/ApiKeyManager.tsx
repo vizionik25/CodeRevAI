@@ -38,9 +38,14 @@ export default function ApiKeyManager() {
         }
     };
 
-    const createKey = async (e: React.FormEvent) => {
+    const createKey = async (e: any) => {
         e.preventDefault();
-        if (!newKeyName.trim()) return;
+        console.log('Creating key:', newKeyName);
+
+        if (!newKeyName.trim()) {
+            console.log('Key name is empty');
+            return;
+        }
 
         try {
             setIsLoading(true);
@@ -60,6 +65,7 @@ export default function ApiKeyManager() {
             setNewKeyName('');
             fetchKeys();
         } catch (err) {
+            console.error('Error creating key:', err);
             displayError(err, 'create_key');
         } finally {
             setIsLoading(false);
@@ -88,7 +94,7 @@ export default function ApiKeyManager() {
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mt-8">
-            <h2 className="text-xl font-semibold mb-4">API Keys</h2>
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">API Keys</h2>
             <p className="text-gray-600 mb-6 text-sm">
                 Generate API keys to integrate CodeRevAI with third-party tools like Make.com, Zapier, or n8n.
             </p>
@@ -101,14 +107,14 @@ export default function ApiKeyManager() {
                     type="text"
                     placeholder="Key Name (e.g. Make.com Integration)"
                     value={newKeyName}
-                    onChange={(e) => setNewKeyName(e.target.value)}
-                    className="flex-1 p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    onChange={(e: any) => setNewKeyName(e.target.value)}
+                    className="flex-1 p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-gray-800"
                     disabled={isLoading}
                 />
                 <button
                     type="submit"
                     disabled={isLoading || !newKeyName.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                     {isLoading ? 'Creating...' : 'Create Key'}
                 </button>
@@ -130,12 +136,12 @@ export default function ApiKeyManager() {
                         Copy this key now. You won't be able to see it again!
                     </p>
                     <div className="flex gap-2">
-                        <code className="flex-1 p-2 bg-white border border-green-200 rounded font-mono text-sm break-all">
+                        <code className="flex-1 p-2 bg-white border border-green-200 rounded font-mono text-sm break-all text-gray-800">
                             {createdKey}
                         </code>
                         <button
                             onClick={() => copyToClipboard(createdKey)}
-                            className="px-3 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50"
+                            className="px-3 py-2 bg-white border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700"
                         >
                             Copy
                         </button>
@@ -161,7 +167,7 @@ export default function ApiKeyManager() {
                             <tbody className="divide-y divide-gray-100">
                                 {keys.map((key: ApiKey) => (
                                     <tr key={key.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-medium">{key.name}</td>
+                                        <td className="px-4 py-3 font-medium text-gray-800">{key.name}</td>
                                         <td className="px-4 py-3 text-gray-500">
                                             {new Date(key.createdAt).toLocaleDateString()}
                                         </td>

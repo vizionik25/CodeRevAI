@@ -42,6 +42,14 @@ export const Header = ({ onToggleHistory }: HeaderProps) => {
         </div>
         <div className="flex items-center gap-4">
           <SignedIn>
+            <Link href="/dashboard/api-keys">
+              <button
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
+                aria-label="Manage API Keys"
+              >
+                API Keys
+              </button>
+            </Link>
             {isPro ? (
               <>
                 <Link href="/billing">
