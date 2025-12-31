@@ -2,8 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 export const dynamic = 'force-static';
 
@@ -22,29 +20,8 @@ export default async function ApiDocsPage() {
                 <a href="/dashboard/api-keys" className="text-indigo-400 hover:underline mb-6 inline-block">
                     ← Back to API Keys
                 </a>
-                <article className="prose prose-invert prose-lg max-w-none">
-                    <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                            code({ node, inline, className, children, ...props }: any) {
-                                const match = /language-(\w+)/.exec(className || '');
-                                return !inline && match ? (
-                                    <SyntaxHighlighter
-                                        style={vscDarkPlus as any}
-                                        language={match[1]}
-                                        PreTag="div"
-                                        {...props}
-                                    >
-                                        {String(children).replace(/\n$/, '')}
-                                    </SyntaxHighlighter>
-                                ) : (
-                                    <code className={className} {...props}>
-                                        {children}
-                                    </code>
-                                );
-                            },
-                        }}
-                    >
+                <article className="prose prose-invert prose-lg max-w-none prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700 prose-code:text-indigo-300">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {markdown}
                     </ReactMarkdown>
                 </article>
