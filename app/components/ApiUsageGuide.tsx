@@ -20,8 +20,15 @@ export default function ApiUsageGuide() {
 
     return (
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mt-8">
-            <h3 className="text-xl font-semibold mb-4 text-indigo-400">Integration Guide</h3>
-
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-indigo-400">Integration Guide</h3>
+                <a
+                    href="/docs/api"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white font-semibold transition-colors text-sm"
+                >
+                    📖 View Full API Documentation
+                </a>
+            </div>
             <div className="space-y-6">
                 <div>
                     <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2">Base Endpoint</h4>
