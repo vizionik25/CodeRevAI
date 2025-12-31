@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(keys);
     } catch (error) {
         logger.error('Error listing API keys', error, requestId);
-        return NextResponse.json(createErrorResponse(error), { status: 500 });
+        const status = error instanceof AppError && error.code === 'UNAUTHORIZED' ? 401 : 500;
+        return NextResponse.json(createErrorResponse(error), { status });
     }
 }
 

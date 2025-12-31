@@ -3,6 +3,7 @@
 import * as ReactImport from 'react';
 const React: any = ReactImport;
 import { useApiErrorDisplay } from '../hooks/useApiErrorDisplay';
+import { logger } from '../utils/logger';
 import Notification from './Notification';
 
 interface ApiKey {
@@ -28,7 +29,11 @@ export default function ApiKeyManager() {
         try {
             setIsLoading(true);
             const res = await fetch('/api/keys');
-            if (!res.ok) throw new Error('Failed to fetch keys');
+            if (!res.ok) {
+                const text = await res.text();
+                logger.error('Fetch keys failed', { status: res.status, text });
+                throw new Error(`Failed to fetch keys: ${res.status} ${text}`);
+            }
             const data = await res.json();
             setKeys(data);
         } catch (err) {
