@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 export default function ApiUsageGuide() {
-    const [baseUrl, setBaseUrl] = useState('');
+    const [baseUrl, setBaseUrl] = React.useState('');
 
-    useEffect(() => {
+    React.useEffect(() => {
         setBaseUrl(window.location.origin);
     }, []);
 
