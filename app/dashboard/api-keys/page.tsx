@@ -3,6 +3,7 @@
 import React from 'react';
 import { Header } from '../../components/Header';
 import ApiKeyManager from '../../components/ApiKeyManager';
+import ApiUsageGuide from '../../components/ApiUsageGuide';
 import { useUser } from '@clerk/nextjs';
 import { redirect } from 'next/navigation';
 
@@ -33,6 +34,7 @@ export default function ApiKeysPage() {
                     </div>
 
                     <ApiKeyManager />
+                    <ApiUsageGuide />
                 </div>
             </main>
         </div>
