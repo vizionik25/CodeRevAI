@@ -1,26 +1,37 @@
-import { Logging } from '@google-cloud/logging';
+
+import type { Logging as LoggingType } from '@google-cloud/logging';
 
 /**
  * Enhanced logging utility with request ID support and Google Cloud Logging integration.
  * - In 'development', it logs to the console.
- * - In 'production', it sends structured logs to Google Cloud Logging.
+ * - In 'production', it attempts to send structured logs to Google Cloud Logging.
+ * - If GCP Logging fails to initialize (e.g. on Vercel), it gracefully falls back to console logging.
  */
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isServer = typeof window === 'undefined';
 
 // --- Google Cloud Logging Setup ---
-let gcpLogging: Logging | null = null;
+let gcpLogging: LoggingType | null = null;
 let gcpLog: any = null; // This will be a LogSync instance
 
-if (!isDevelopment) {
+if (!isDevelopment && isServer) {
   try {
-    gcpLogging = new Logging();
+    // Dynamically require Google Cloud Logging to avoid client-side bundle errors
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Logging } = require('@google-cloud/logging');
+    const loggingInstance = new Logging();
+    gcpLogging = loggingInstance;
     // Name of the log as it appears in Google Cloud Logging
-    gcpLog = gcpLogging.log('coderevai-logs'); 
+    gcpLog = loggingInstance.log('coderevai-logs');
   } catch (error) {
-    console.error('[ERROR] Failed to initialize Google Cloud Logging:', error);
+    // Graceful fallback for Vercel/non-GCP environments
+    // We suppress the error to a simple warning to avoid noise in logs
+    console.warn('[WARN] Google Cloud Logging failed to initialize (falling back to console logging):',
+      error instanceof Error ? error.message : String(error)
+    );
     gcpLogging = null;
     gcpLog = null;
   }
@@ -73,17 +84,23 @@ function normalizeError(error: unknown): Record<string, any> {
  * Core logging function that routes logs to console or Google Cloud.
  */
 function log(level: LogLevel, message: string, metadata: Record<string, any> | null, requestId: string | null) {
-  if (isDevelopment) {
+  // Always log to console in dev OR if GCP logging is unavailable
+  if (isDevelopment || !gcpLog) {
     const consoleMethod = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+
+    // For Vercel in production, we might want JSON output for easier parsing, 
+    // but standard console format is safer and readable.
     const logParts = formatConsoleMessage(requestId, `[${level.toUpperCase()}]`, message);
     if (metadata && Object.keys(metadata).length > 0) {
       logParts.push(metadata);
     }
     consoleMethod(...logParts);
   } else if (gcpLog) {
+    // Write to GCP Logging
     const entryMetadata = prepareGcpMetadata(level, requestId, metadata);
     const entry = gcpLog.entry(entryMetadata, message);
     gcpLog.write(entry).catch((err: Error) => {
+      // If writing to GCP fails drastically, fallback to console once
       console.error('Failed to write log to Google Cloud:', err);
     });
   }
