@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import * as ReactImport from 'react';
+const React: any = ReactImport;
 
 export default function ApiUsageGuide() {
     const [baseUrl, setBaseUrl] = React.useState('');
