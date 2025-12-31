@@ -116,28 +116,43 @@ export function validateLanguage(language: string): { valid: boolean; error?: st
 
 /**
  * Validate review modes
+ * Accepts a single mode string OR an array of modes (max 3)
  */
-export function validateReviewModes(modes: any): { valid: boolean; error?: string } {
-  if (!Array.isArray(modes)) {
-    return { valid: false, error: 'Review modes must be an array' };
-  }
-
+export function validateReviewModes(modes: any): { valid: boolean; error?: string; normalized?: string[] } {
   const validModes = [
     'comprehensive', 'bug_fixes', 'performance', 'security',
     'best_practices', 'test_generation', 'production_ready'
   ];
 
-  for (const mode of modes) {
+  // Normalize input: accept string or array
+  let modeArray: string[];
+
+  if (!modes) {
+    // Empty/undefined is valid, defaults to comprehensive
+    return { valid: true, normalized: ['comprehensive'] };
+  }
+
+  if (typeof modes === 'string') {
+    modeArray = [modes];
+  } else if (Array.isArray(modes)) {
+    modeArray = modes;
+  } else {
+    return { valid: false, error: 'Review modes must be a string or an array of strings' };
+  }
+
+  // Validate each mode
+  for (const mode of modeArray) {
     if (typeof mode !== 'string' || !validModes.includes(mode)) {
-      return { valid: false, error: `Invalid review mode: ${mode}` };
+      return { valid: false, error: `Invalid review mode: ${mode}. Valid modes: ${validModes.join(', ')}` };
     }
   }
 
-  if (modes.length > 5) {
-    return { valid: false, error: 'Too many review modes selected (max 5)' };
+  // Limit to 3 modes
+  if (modeArray.length > 3) {
+    return { valid: false, error: 'Too many review modes selected (max 3)' };
   }
 
-  return { valid: true };
+  return { valid: true, normalized: modeArray };
 }
 
 /**

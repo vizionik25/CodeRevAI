@@ -112,7 +112,7 @@ Analyzes multiple files from a repository.
 |-------|------|----------|-------------|
 | `repoUrl` | string | Yes | GitHub repository URL (e.g., `https://github.com/facebook/react`) |
 | `customPrompt` | string | No | Additional instructions for the review |
-| `reviewModes` | string[] | No | Review focus areas (e.g., `["security", "performance"]`) |
+| `reviewModes` | string or string[] | No | Single mode or array of up to 3 modes (e.g., `"security"` or `["security", "performance"]`) |
 
 > **Note:** The API automatically fetches files from the GitHub repository. Only public repositories are supported.
 
