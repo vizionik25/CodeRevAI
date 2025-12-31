@@ -103,16 +103,18 @@ Analyzes multiple files from a repository.
 ```json
 {
   "repoUrl": "https://github.com/owner/repo",
-  "files": [
-    {
-      "path": "src/index.ts",
-      "content": "..."
-    }
-  ],
   "customPrompt": "Check for architectural issues",
   "reviewModes": ["comprehensive"]
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `repoUrl` | string | Yes | GitHub repository URL (e.g., `https://github.com/facebook/react`) |
+| `customPrompt` | string | No | Additional instructions for the review |
+| `reviewModes` | string[] | No | Review focus areas (e.g., `["security", "performance"]`) |
+
+> **Note:** The API automatically fetches files from the GitHub repository. Only public repositories are supported.
 
 **Response:**
 

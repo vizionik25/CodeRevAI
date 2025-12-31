@@ -14,6 +14,8 @@ import { generateRepoReview } from '@/app/services/serverGeminiService';
 import { FILE_SIZE_LIMITS } from '@/app/data/constants';
 import { logger } from '@/app/utils/logger';
 import { AppError, createErrorResponse } from '@/app/types/errors';
+import { parseGitHubUrl } from '@/app/utils/githubUtils';
+import { fetchRepoFiles, fetchFilesWithContent } from '@/app/services/githubService';
 
 
 
@@ -65,20 +67,12 @@ export async function POST(req: Request) {
     }
 
     // Parse request body
-    const { files, repoUrl, customPrompt, reviewModes } = await req.json();
+    const { repoUrl, customPrompt, reviewModes } = await req.json();
 
-    // Validate inputs
-    if (!files || !Array.isArray(files) || files.length === 0) {
-      const error = new AppError('INVALID_INPUT', 'Files array is required and must not be empty');
-      return NextResponse.json(
-        createErrorResponse(error),
-        { status: 400, headers: { 'X-Request-ID': requestId } }
-      );
-    }
-
+    // Validate repoUrl is required
     const urlValidation = validateRepoUrl(repoUrl);
     if (!urlValidation.valid) {
-      const error = new AppError('INVALID_INPUT', urlValidation.error || 'Invalid repository URL');
+      const error = new AppError('INVALID_INPUT', urlValidation.error || 'Invalid repository URL. Provide a valid GitHub URL like https://github.com/owner/repo');
       return NextResponse.json(
         createErrorResponse(error),
         { status: 400, headers: { 'X-Request-ID': requestId } }
@@ -103,8 +97,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // Parse GitHub URL to get owner/repo
+    const repoInfo = parseGitHubUrl(repoUrl);
+    if (!repoInfo) {
+      const error = new AppError('INVALID_INPUT', 'Could not parse repository URL. Use format: https://github.com/owner/repo');
+      return NextResponse.json(
+        createErrorResponse(error),
+        { status: 400, headers: { 'X-Request-ID': requestId } }
+      );
+    }
+
+    logger.info('Fetching repository files from GitHub', { owner: repoInfo.owner, repo: repoInfo.repo }, requestId);
+
+    // Fetch files from GitHub API
+    const repoFiles = await fetchRepoFiles(repoInfo.owner, repoInfo.repo, requestId);
+
+    if (repoFiles.length === 0) {
+      const error = new AppError('INVALID_INPUT', 'No reviewable code files found in the repository');
+      return NextResponse.json(
+        createErrorResponse(error),
+        { status: 400, headers: { 'X-Request-ID': requestId } }
+      );
+    }
+
     // Filter out sensitive files
-    const safeFiles = filterSensitiveFiles(files);
+    const safeFiles = filterSensitiveFiles(repoFiles.map(f => ({ path: f.path, content: '' })));
 
     if (safeFiles.length === 0) {
       const error = new AppError('INVALID_INPUT', 'No valid files to review after filtering sensitive files');
@@ -114,16 +131,33 @@ export async function POST(req: Request) {
       );
     }
 
+    // Limit files to prevent excessive API calls (top 50 files)
+    // Use the original repoFiles which have the correct Language type
+    const limitedRepoFiles = repoFiles.filter(f =>
+      safeFiles.some(sf => sf.path === f.path)
+    ).slice(0, 50);
+    logger.info(`Processing ${limitedRepoFiles.length} files (limited from ${safeFiles.length})`, {}, requestId);
+
+    // Fetch file contents from GitHub
+    const filesWithContent = await fetchFilesWithContent(
+      repoInfo.owner,
+      repoInfo.repo,
+      limitedRepoFiles,
+      requestId
+    );
+
     // Sanitize file contents and check total size
     let totalSize = 0;
-    const sanitizedFiles = safeFiles.map(file => {
-      const sanitizedContent = sanitizeInput(file.content || '');
-      totalSize += sanitizedContent.length;
-      return {
-        path: sanitizeInput(file.path),
-        content: sanitizedContent,
-      };
-    });
+    const sanitizedFiles = filesWithContent
+      .filter(file => file.content) // Only include files with content
+      .map(file => {
+        const sanitizedContent = sanitizeInput(file.content || '');
+        totalSize += sanitizedContent.length;
+        return {
+          path: sanitizeInput(file.path),
+          content: sanitizedContent,
+        };
+      });
 
     // Check total repository size
     const sizeValidation = validateFileSize(sanitizedFiles.map(f => f.content).join(''), FILE_SIZE_LIMITS.REPO_TOTAL_MAX);
